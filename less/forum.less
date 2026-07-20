@@ -1,0 +1,45 @@
+// The one banner-card design, shared by all three placements. Forked from the
+// sponsor card on linkrobins.com: theme-variable driven so it follows any
+// light/dark palette, with a fallback for Flarum 1.x themes that don't define
+// the custom properties.
+
+.LinkRobinsBanners-card {
+    background: var(--control-bg, rgba(127, 127, 127, 0.08));
+    border: 1px solid rgba(127, 127, 127, 0.25);
+    border-color: ~"color-mix(in srgb, var(--primary-color, #4083bd) 30%, transparent)";
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+
+.LinkRobinsBanners-label {
+    font-size: 11px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--muted-more-color, #888);
+    margin-bottom: 8px;
+}
+
+.LinkRobinsBanners-content {
+    color: var(--text-color, inherit);
+    font-size: 14px;
+    line-height: 1.55;
+    overflow-wrap: break-word;
+
+    > *:first-child { margin-top: 0; }
+    > *:last-child  { margin-bottom: 0; }
+
+    a { font-weight: 600; }
+
+    img { max-width: 100%; height: auto; }
+}
+
+// Placement spacing. Each banner is spliced into the post stream as its own
+// .PostStream-item, so it only needs vertical margins.
+.LinkRobinsBanners-item--top .LinkRobinsBanners-card    { margin-bottom: 20px; }
+.LinkRobinsBanners-item--bottom .LinkRobinsBanners-card { margin-top: 20px; }
+.LinkRobinsBanners-item--stream .LinkRobinsBanners-card { margin: 20px 0; }
+
+@media (max-width: 767px) {
+    .LinkRobinsBanners-card { padding: 12px 14px; }
+}

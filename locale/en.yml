@@ -1,0 +1,17 @@
+linkrobins-discussion-banners:
+  admin:
+    settings:
+      top_heading: 'Banner above the discussion'
+      bottom_heading: 'Banner below the discussion'
+      stream_heading: 'Banner between posts'
+      enabled_label: 'Show this banner'
+      label_label: 'Small heading'
+      label_help: 'The short uppercase line at the top of the banner, for example "Info" or "From our sponsor". Leave blank for none.'
+      content_label: 'Banner content (HTML)'
+      content_help: 'The banner body. HTML is allowed and is sanitized before display.'
+      visibility_label: 'Who sees it'
+      visibility_everyone: 'Everyone'
+      visibility_guests: 'Guests only'
+      visibility_members: 'Logged-in users only'
+      stream_every_label: 'Show after every N posts'
+      stream_every_help: 'The banner appears after every Nth post in a discussion. Minimum 2.'

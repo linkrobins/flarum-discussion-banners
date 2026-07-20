@@ -1,0 +1,67 @@
+{
+    "name": "linkrobins/discussion-banners",
+    "description": "Configurable info banners above, below, and between the posts of a discussion.",
+    "type": "flarum-extension",
+    "license": "MIT",
+    "keywords": ["flarum", "banner", "notice", "announcement", "ads"],
+    "homepage": "https://linkrobins.com",
+    "support": {
+        "issues": "https://github.com/linkrobins/flarum-discussion-banners/issues",
+        "source": "https://github.com/linkrobins/flarum-discussion-banners"
+    },
+    "authors": [
+        {
+            "name": "Karl Bullock",
+            "email": "karl@linkrobins.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0",
+        "flarum/core": ">=1.8.0 <3.0.0"
+    },
+    "require-dev": {
+        "flarum/testing": "^2.0",
+        "flarum/phpstan": "^2.0"
+    },
+    "minimum-stability": "beta",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "LinkRobins\\DiscussionBanners\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LinkRobins\\DiscussionBanners\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "analyse:phpstan": "phpstan analyse",
+        "clear-cache:phpstan": "phpstan clear-result-cache",
+        "test": [
+            "@test:unit",
+            "@test:integration"
+        ],
+        "test:unit": "phpunit -c tests/phpunit.unit.xml",
+        "test:integration": "phpunit -c tests/phpunit.integration.xml",
+        "test:setup": "@php tests/integration/setup.php"
+    },
+    "scripts-descriptions": {
+        "analyse:phpstan": "Run static analysis.",
+        "test": "Runs all tests.",
+        "test:unit": "Runs all unit tests.",
+        "test:integration": "Runs all integration tests.",
+        "test:setup": "Sets up a database for use with integration tests. Execute this only once."
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Discussion Banners",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-bullhorn",
+                "color": "#07adcc",
+                "backgroundColor": "#1a2535"
+            }
+        }
+    }
+}
