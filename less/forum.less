@@ -34,6 +34,37 @@
     img { max-width: 100%; height: auto; }
 }
 
+// Optional icon beside the content: an uploaded image (height-capped at its
+// natural ratio, like the sponsor card it's forked from) or a large emoji.
+.LinkRobinsBanners-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    .LinkRobinsBanners-content {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.LinkRobinsBanners-icon {
+    flex: 0 0 auto;
+}
+
+.LinkRobinsBanners-iconImage {
+    display: block;
+    height: 44px;
+    width: auto;
+    max-width: 100px;
+    border-radius: 8px;
+}
+
+.LinkRobinsBanners-iconEmoji {
+    display: block;
+    font-size: 30px;
+    line-height: 1.2;
+}
+
 // Placement spacing. Each banner is spliced into the post stream as its own
 // .PostStream-item, so it only needs vertical margins.
 .LinkRobinsBanners-item--top .LinkRobinsBanners-card    { margin-bottom: 20px; }
@@ -42,4 +73,6 @@
 
 @media (max-width: 767px) {
     .LinkRobinsBanners-card { padding: 12px 14px; }
+    .LinkRobinsBanners-iconImage { height: 40px; }
+    .LinkRobinsBanners-iconEmoji { font-size: 26px; }
 }

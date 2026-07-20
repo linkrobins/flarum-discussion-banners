@@ -4,7 +4,7 @@ namespace LinkRobins\DiscussionBanners;
 
 use Flarum\Api\Context;
 use Flarum\Api\Schema;
-use Flarum\Settings\SettingsRepositoryInterface;
+
 
 /**
  * Flarum 2.x: serialize the viewer's banners onto the forum resource.
@@ -14,7 +14,7 @@ use Flarum\Settings\SettingsRepositoryInterface;
 final class AddForumBannersV2
 {
     public function __construct(
-        protected SettingsRepositoryInterface $settings,
+        protected BannerSettings $banners,
     ) {
     }
 
@@ -29,7 +29,7 @@ final class AddForumBannersV2
                     // Fail closed: this ships on every forum response, so a
                     // throw here must degrade to "no banners", not a 500.
                     try {
-                        return BannerSettings::visibleTo($this->settings, $context->getActor()->isGuest());
+                        return $this->banners->visibleTo($context->getActor()->isGuest());
                     } catch (\Throwable $e) {
                         return [];
                     }

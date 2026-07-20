@@ -1,0 +1,64 @@
+// Icon picker on the extension's settings page.
+
+.LinkRobinsBanners-iconSetting {
+    margin-bottom: 20px;
+
+    > label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+}
+
+.LinkRobinsBanners-iconSetting-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.LinkRobinsBanners-iconPreviewImage {
+    display: block;
+    height: 44px;
+    width: auto;
+    max-width: 100px;
+    border-radius: 8px;
+    border: 1px solid rgba(127, 127, 127, 0.25);
+}
+
+.LinkRobinsBanners-iconPreviewEmoji {
+    font-size: 30px;
+    line-height: 1.2;
+}
+
+.LinkRobinsBanners-emojiGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+    max-width: 420px;
+}
+
+.LinkRobinsBanners-emojiChoice {
+    font-size: 20px;
+    line-height: 1;
+    padding: 6px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--control-bg, rgba(127, 127, 127, 0.12));
+    }
+
+    &.is-selected {
+        border-color: var(--primary-color, #4083bd);
+        background: var(--control-bg, rgba(127, 127, 127, 0.12));
+    }
+}
+
+.LinkRobinsBanners-emojiInput {
+    max-width: 120px;
+}

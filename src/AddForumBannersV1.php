@@ -2,7 +2,7 @@
 
 namespace LinkRobins\DiscussionBanners;
 
-use Flarum\Settings\SettingsRepositoryInterface;
+
 
 /**
  * Flarum 1.x: serialize the viewer's banners onto the forum payload via the
@@ -13,7 +13,7 @@ use Flarum\Settings\SettingsRepositoryInterface;
 final class AddForumBannersV1
 {
     public function __construct(
-        protected SettingsRepositoryInterface $settings,
+        protected BannerSettings $banners,
     ) {
     }
 
@@ -28,10 +28,7 @@ final class AddForumBannersV1
         // Fail closed: degrade to "no banners" rather than break the forum
         // payload that every page load depends on.
         try {
-            $attributes['linkrobinsDiscussionBanners'] = BannerSettings::visibleTo(
-                $this->settings,
-                $serializer->getActor()->isGuest()
-            );
+            $attributes['linkrobinsDiscussionBanners'] = $this->banners->visibleTo($serializer->getActor()->isGuest());
         } catch (\Throwable $e) {
             $attributes['linkrobinsDiscussionBanners'] = [];
         }

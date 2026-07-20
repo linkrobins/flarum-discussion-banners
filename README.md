@@ -8,7 +8,7 @@ A [Flarum](https://flarum.org) extension that shows configurable info banners on
 - **Below the discussion**, after the last post
 - **Between posts**, after every Nth post
 
-Each placement has its own on/off switch, an optional small uppercase heading (for example "Info" or "From our sponsor"), HTML content, and a visibility setting: everyone, guests only, or logged-in users only. Visibility is enforced server side, so content for one audience is never delivered to another.
+Each placement has its own on/off switch, an optional small uppercase heading (for example "Info" or "From our sponsor"), HTML content, an optional icon beside the text (an uploaded image or an emoji), and a visibility setting: everyone, guests only, or logged-in users only. Visibility is enforced server side, so content for one audience is never delivered to another.
 
 Banners render as a theme-aware card that follows your forum's colors in both light and dark modes. Content HTML is sanitized before display.
 

@@ -43,11 +43,29 @@ function sanitize(html) {
   return sanitized.get(html);
 }
 
+// The optional icon beside the content: an admin-uploaded image (served from
+// the assets disk) or an emoji rendered as plain text (never trusted HTML).
+function bannerIcon(banner) {
+  const m = window.m;
+  const icon = banner.icon;
+  if (!icon) return null;
+  if (icon.type === 'image' && icon.url) {
+    return m('img', { className: 'LinkRobinsBanners-iconImage', src: icon.url, alt: '', loading: 'lazy' });
+  }
+  if (icon.type === 'emoji' && icon.emoji) {
+    return m('span', { className: 'LinkRobinsBanners-iconEmoji', 'aria-hidden': 'true' }, icon.emoji);
+  }
+  return null;
+}
+
 function bannerCard(banner, variant) {
   const m = window.m;
+  const icon = bannerIcon(banner);
+  const content = m('div', { className: 'LinkRobinsBanners-content' }, m.trust(sanitize(banner.contentHtml || '')));
+
   return m('div', { className: 'LinkRobinsBanners-card LinkRobinsBanners-card--' + variant }, [
     banner.label ? m('div', { className: 'LinkRobinsBanners-label' }, banner.label) : null,
-    m('div', { className: 'LinkRobinsBanners-content' }, m.trust(sanitize(banner.contentHtml || ''))),
+    icon ? m('div', { className: 'LinkRobinsBanners-row' }, [m('div', { className: 'LinkRobinsBanners-icon' }, icon), content]) : content,
   ]);
 }
 
