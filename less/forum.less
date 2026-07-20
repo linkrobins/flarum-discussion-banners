@@ -20,6 +20,21 @@
     margin-bottom: 8px;
 }
 
+// With an admin accent color set, the border, background tint, and small
+// heading all derive from that ONE color; body text stays on the theme's
+// text color so the banner is readable on light and dark themes alike.
+// Browsers without color-mix fall back to a plain accent border and the
+// default card background.
+.LinkRobinsBanners-card--tinted {
+    border-color: var(--lrdb-accent);
+    border-color: ~"color-mix(in srgb, var(--lrdb-accent) 40%, transparent)";
+    background: ~"color-mix(in srgb, var(--lrdb-accent) 10%, transparent)";
+
+    .LinkRobinsBanners-label {
+        color: var(--lrdb-accent);
+    }
+}
+
 .LinkRobinsBanners-content {
     color: var(--text-color, inherit);
     font-size: 14px;

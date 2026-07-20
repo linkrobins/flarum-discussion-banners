@@ -56,6 +56,14 @@ final class BannerSettings
                 'contentHtml' => $content,
             ];
 
+            // Optional accent color. Strictly hex-validated here: the client
+            // drops it into an inline CSS custom property, so nothing but a
+            // color may ever pass through.
+            $color = trim((string) $this->settings->get($prefix.'_color'));
+            if ($color !== '' && preg_match('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $color)) {
+                $banner['color'] = strtolower($color);
+            }
+
             if ($icon = $this->icon($prefix)) {
                 $banner['icon'] = $icon;
             }

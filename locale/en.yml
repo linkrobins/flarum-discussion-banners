@@ -13,6 +13,8 @@ linkrobins-discussion-banners:
       visibility_everyone: 'Everyone'
       visibility_guests: 'Guests only'
       visibility_members: 'Logged-in users only'
+      color_label: 'Accent color'
+      color_help: 'Colors the banner border, background tint, and small heading. Leave blank to use your theme color. Body text always follows the theme so it stays readable in light and dark modes.'
       icon_label: 'Icon'
       icon_help: 'An optional icon shown beside the banner text: upload a small image or pick an emoji.'
       icon_none: 'No icon'

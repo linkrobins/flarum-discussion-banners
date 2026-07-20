@@ -14,6 +14,51 @@ const EMOJI_PRESETS = ['📢', 'ℹ️', '⚠️', '💡', '🎉', '⭐', '🔥'
 // without waiting for a settings reload.
 const uploadedIconUrl = {};
 
+// Resolve a core component on either major (2.x registry / 1.x compat map).
+function coreComponent(path) {
+  const unwrap = (mod) => (mod && mod.default ? mod.default : mod);
+  try {
+    const reg = window.flarum && window.flarum.reg;
+    if (reg && typeof reg.get === 'function') {
+      const mod = reg.get('core', path);
+      if (mod) return unwrap(mod);
+    }
+  } catch (e) {}
+  try {
+    const compat = window.flarum && window.flarum.core && window.flarum.core.compat;
+    if (compat && compat[path]) return unwrap(compat[path]);
+  } catch (e) {}
+  return null;
+}
+
+// One accent color per banner, entered with the same control as tag colors.
+// Empty = the theme's primary color. The border, background tint, and small
+// heading derive from it on the forum side, so one color stays readable on
+// light and dark themes (unlike separate border/background/text pickers).
+function registerColorSetting(registry, placement, label, trans, priority) {
+  registry.registerSetting(function () {
+    const m = window.m;
+    const page = this;
+    if (!page || typeof page.setting !== 'function') return null;
+
+    const stream = page.setting(PREFIX + placement + '_color');
+    const ColorPreviewInput = coreComponent('common/components/ColorPreviewInput');
+    const inputAttrs = {
+      className: 'FormControl',
+      placeholder: '#1ec3d6',
+      value: stream() || '',
+      oninput: (e) => stream(e.target.value),
+      onchange: (e) => stream(e.target.value),
+    };
+
+    return m('div', { className: 'Form-group' }, [
+      m('label', label(placement, 'color_label')),
+      m('div', { className: 'helpText' }, trans('color_help')),
+      ColorPreviewInput ? m(ColorPreviewInput, inputAttrs) : m('input', Object.assign({ type: 'text' }, inputAttrs)),
+    ]);
+  }, priority);
+}
+
 // The icon picker is a callback setting (both majors' settings pages invoke
 // function entries with `this` = the extension page, whose setting() streams
 // feed the regular Save button). Image uploads hit our own endpoint and are
@@ -199,7 +244,8 @@ window.app.initializers.add(EXT_ID, () => {
       },
       priority - 3
     );
-    registerIconSetting(registry, placement, label, trans, priority - 4);
+    registerColorSetting(registry, placement, label, trans, priority - 4);
+    registerIconSetting(registry, placement, label, trans, priority - 5);
     if (placement === 'stream') {
       registry.registerSetting(
         {
@@ -209,7 +255,7 @@ window.app.initializers.add(EXT_ID, () => {
           label: label(placement, 'stream_every_label'),
           help: trans('stream_every_help'),
         },
-        priority - 5
+        priority - 6
       );
     }
     priority -= 10;

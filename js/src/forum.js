@@ -63,7 +63,17 @@ function bannerCard(banner, variant) {
   const icon = bannerIcon(banner);
   const content = m('div', { className: 'LinkRobinsBanners-content' }, m.trust(sanitize(banner.contentHtml || '')));
 
-  return m('div', { className: 'LinkRobinsBanners-card LinkRobinsBanners-card--' + variant }, [
+  // Optional admin accent color, applied as a CSS custom property the card's
+  // tinted variant derives its border/background/label colors from. The
+  // server only serializes strict hex, and the regex here is a second guard
+  // since this lands in an inline style.
+  const attrs = { className: 'LinkRobinsBanners-card LinkRobinsBanners-card--' + variant };
+  if (banner.color && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(banner.color)) {
+    attrs.className += ' LinkRobinsBanners-card--tinted';
+    attrs.style = '--lrdb-accent: ' + banner.color + ';';
+  }
+
+  return m('div', attrs, [
     banner.label ? m('div', { className: 'LinkRobinsBanners-label' }, banner.label) : null,
     icon ? m('div', { className: 'LinkRobinsBanners-row' }, [m('div', { className: 'LinkRobinsBanners-icon' }, icon), content]) : content,
   ]);
