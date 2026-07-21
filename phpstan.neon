@@ -1,0 +1,14 @@
+includes:
+    - vendor/flarum/phpstan/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - extend.php
+        - src
+    ignoreErrors:
+        # The 1.x serialization branch: these classes only exist on Flarum
+        # 1.x installs, while analysis runs against the 2.x vendor tree. The
+        # references are behind class_exists() guards at runtime.
+        - '#Flarum\\Extend\\ApiSerializer#'
+        - '#Flarum\\Api\\Serializer\\ForumSerializer#'

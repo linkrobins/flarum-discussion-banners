@@ -3,7 +3,13 @@
     "description": "Configurable info banners above, below, and between the posts of a discussion.",
     "type": "flarum-extension",
     "license": "MIT",
-    "keywords": ["flarum", "banner", "notice", "announcement", "ads"],
+    "keywords": [
+        "flarum",
+        "banner",
+        "notice",
+        "announcement",
+        "ads"
+    ],
     "homepage": "https://linkrobins.com",
     "support": {
         "issues": "https://github.com/linkrobins/flarum-discussion-banners/issues",
@@ -61,6 +67,12 @@
                 "name": "fas fa-bullhorn",
                 "color": "#07adcc",
                 "backgroundColor": "#1a2535"
+            }
+        },
+        "flarum-cli": {
+            "modules": {
+                "githubActions": true,
+                "backendTesting": true
             }
         }
     }
