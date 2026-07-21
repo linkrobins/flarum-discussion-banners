@@ -11,4 +11,4 @@ parameters:
         # 1.x installs, while analysis runs against the 2.x vendor tree. The
         # references are behind class_exists() guards at runtime.
         - '#Flarum\\Extend\\ApiSerializer#'
-        - '#Flarum\\Api\\Serializer\\ForumSerializer#'
+        - '#Flarum\\Api\\Serializer\\DiscussionSerializer#'

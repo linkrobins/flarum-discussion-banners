@@ -1,8 +1,13 @@
 import DOMPurify from 'dompurify';
 
 // Discussion Banners: admin-configured info banners spliced into the post
-// stream of every discussion, in up to three placements: above the first
-// post, below the last post, and after every Nth post.
+// stream, in up to three placements: above the first post, below the last
+// post, and after every Nth post. Any number of banners can be configured, and
+// each one can be targeted at particular discussions or tags.
+//
+// Targeting is resolved server-side: the discussion payload carries only the
+// banners this viewer should see in this discussion, so there is nothing to
+// filter here (and nothing to leak from other discussions).
 //
 // This bundle intentionally imports NOTHING from flarum/* and uses the global
 // `app`/`m`/`flarum` objects instead, so the same artifact runs on both
@@ -13,14 +18,12 @@ import DOMPurify from 'dompurify';
 const EXT_ID = 'linkrobins-discussion-banners';
 const ATTR = 'linkrobinsDiscussionBanners';
 
-// The server sends only the banners this viewer may see (visibility is
-// enforced server-side); read them fresh each render so a settings change
-// lands after reload without stale module state.
-function banners() {
-  const app = window.app;
+// Read fresh on every render so a settings change lands after a reload without
+// stale module state.
+function bannersFor(discussion) {
   try {
-    if (app && app.forum && typeof app.forum.attribute === 'function') {
-      return app.forum.attribute(ATTR) || [];
+    if (discussion && typeof discussion.attribute === 'function') {
+      return discussion.attribute(ATTR) || [];
     }
   } catch (e) {}
   return [];
@@ -32,9 +35,8 @@ const sanitized = new Map();
 function sanitize(html) {
   if (!sanitized.has(html)) {
     sanitized.set(html, DOMPurify.sanitize(html));
-    if (sanitized.size > 20) {
-      // The settings only ever hold three banners; a runaway map means the
-      // content keeps changing, so just reset it.
+    if (sanitized.size > 50) {
+      // A runaway map means the content keeps changing, so just reset it.
       const keep = sanitized.get(html);
       sanitized.clear();
       sanitized.set(html, keep);
@@ -131,44 +133,56 @@ window.app.initializers.add(EXT_ID, () => {
     PostStream.prototype._lrBannersPatched = true;
 
     extendMethod(PostStream.prototype, 'view', function (vnode) {
-      const all = banners();
-      if (!all.length || !vnode || !Array.isArray(vnode.children)) return;
+      if (!vnode || !Array.isArray(vnode.children)) return;
 
-      const top = all.find((b) => b.placement === 'top');
-      const bottom = all.find((b) => b.placement === 'bottom');
-      const stream = all.find((b) => b.placement === 'stream');
+      // Set in PostStream's oninit on both majors; the attrs are the fallback.
+      const discussion = this.discussion || (this.attrs && this.attrs.discussion);
+      const all = bannersFor(discussion);
+      if (!all.length) return;
 
-      // Total number of stream entries, for anchoring the bottom banner to
-      // the discussion's ABSOLUTE last post (the stream only renders a
-      // window of a long discussion at a time).
+      const tops = all.filter((b) => b.placement === 'top');
+      const bottoms = all.filter((b) => b.placement === 'bottom');
+      const streams = all.filter((b) => b.placement === 'stream');
+
+      // Total number of stream entries, for anchoring bottom banners to the
+      // discussion's ABSOLUTE last post (the stream only renders a window of a
+      // long discussion at a time).
       const state = this.stream || (this.attrs && this.attrs.stream);
       const total = state && typeof state.count === 'function' ? state.count() : null;
 
-      for (let i = 0; i < vnode.children.length; i++) {
-        const child = vnode.children[i];
-        if (!child || !child.attrs || child.attrs['data-index'] === undefined) continue;
+      const children = vnode.children;
+      const out = [];
+
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+
         // Only anchor to REAL posts: the reply placeholder is also a
         // .PostStream-item with a data-index but no data-number, and without
         // this guard a banner could land below the composer.
-        if (child.attrs['data-number'] === undefined) continue;
+        const isPost = child && child.attrs && child.attrs['data-index'] !== undefined && child.attrs['data-number'] !== undefined;
+        if (!isPost) {
+          out.push(child);
+          continue;
+        }
 
         const index = Number(child.attrs['data-index']);
 
-        if (top && index === 0) {
-          vnode.children.splice(i, 0, bannerItem('top', top, 'top'));
-          i++;
-        }
+        if (index === 0) tops.forEach((b) => out.push(bannerItem(b.id + '-top', b, 'top')));
 
-        if (stream && (index + 1) % stream.every === 0 && (total === null || index < total - 1)) {
-          vnode.children.splice(i + 1, 0, bannerItem('stream-' + index, stream, 'stream'));
-          i++;
-        }
+        out.push(child);
 
-        if (bottom && total !== null && index === total - 1) {
-          vnode.children.splice(i + 1, 0, bannerItem('bottom', bottom, 'bottom'));
-          i++;
-        }
+        streams.forEach((b) => {
+          // Suppressed on the last post so it never stacks with a bottom banner.
+          if ((index + 1) % b.every === 0 && (total === null || index < total - 1)) {
+            out.push(bannerItem(b.id + '-' + index, b, 'stream'));
+          }
+        });
+
+        if (total !== null && index === total - 1) bottoms.forEach((b) => out.push(bannerItem(b.id + '-bottom', b, 'bottom')));
       }
+
+      // Replace in place: the caller keeps the vnode we were handed.
+      children.splice(0, children.length, ...out);
     });
   });
 });

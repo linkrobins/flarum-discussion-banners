@@ -1,14 +1,249 @@
-// Icon picker on the extension's settings page.
+// The banner list editor on the extension's settings page.
 
-.LinkRobinsBanners-iconSetting {
-    margin-bottom: 20px;
-
+.LinkRobinsBanners-editor {
     > label {
         display: block;
         font-weight: bold;
         margin-bottom: 5px;
     }
 }
+
+// Flarum's admin styles .Form-group as a flex column with
+// align-items: flex-start, so anything inside it shrink-wraps its content.
+// Without these the list would be as wide as whichever card is open, and the
+// whole thing would jump wider every time one was expanded.
+.LinkRobinsBanners-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 10px 0;
+    align-self: stretch;
+    width: 100%;
+}
+
+.LinkRobinsBanners-empty {
+    margin: 10px 0;
+    color: var(--muted-color, #999);
+}
+
+.LinkRobinsBanners-card {
+    border: 1px solid rgba(127, 127, 127, 0.25);
+    border-radius: 8px;
+    background: var(--body-bg, transparent);
+    width: 100%;
+    box-sizing: border-box;
+
+    &.is-disabled .LinkRobinsBanners-cardTitle,
+    &.is-disabled .LinkRobinsBanners-cardSummary {
+        opacity: 0.55;
+    }
+}
+
+.LinkRobinsBanners-cardHeader {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
+}
+
+.LinkRobinsBanners-cardToggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+}
+
+.LinkRobinsBanners-cardTitle {
+    font-weight: bold;
+    // Long headings shouldn't push the controls off the row.
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.LinkRobinsBanners-cardPlacement {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(127, 127, 127, 0.15);
+}
+
+.LinkRobinsBanners-cardSummary {
+    color: var(--muted-color, #999);
+    font-size: 13px;
+    flex: 1 1 auto;
+}
+
+.LinkRobinsBanners-cardActions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+
+// Plain button rather than a core Button--link: that class overrides its own
+// hover color, and --alert-error-color is white (it styles text on a colored
+// alert), so deriving the hover color from it made the icon vanish.
+.LinkRobinsBanners-cardDelete {
+    border: 0;
+    background: none;
+    padding: 4px 6px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    color: var(--muted-color, #999);
+
+    &:hover,
+    &:focus {
+        color: #d83e3e;
+        background: rgba(216, 62, 62, 0.12);
+    }
+}
+
+.LinkRobinsBanners-cardBody {
+    padding: 4px 12px 12px;
+    border-top: 1px solid rgba(127, 127, 127, 0.2);
+
+    .Form-group {
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+}
+
+// Discussion and tag targeting.
+
+.LinkRobinsBanners-targets {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    background: rgba(127, 127, 127, 0.08);
+}
+
+.LinkRobinsBanners-picker + .LinkRobinsBanners-picker {
+    margin-top: 12px;
+}
+
+.LinkRobinsBanners-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.LinkRobinsBanners-chipsEmpty {
+    color: var(--muted-color, #999);
+    font-size: 13px;
+}
+
+.LinkRobinsBanners-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 3px 4px 3px 8px;
+    border-radius: 12px;
+    background: rgba(127, 127, 127, 0.18);
+    font-size: 13px;
+}
+
+.LinkRobinsBanners-chipLabel {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.LinkRobinsBanners-chipRemove {
+    border: 0;
+    background: none;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    color: inherit;
+    opacity: 0.7;
+
+    &:hover {
+        opacity: 1;
+    }
+}
+
+.LinkRobinsBanners-results {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    border: 1px solid rgba(127, 127, 127, 0.25);
+    border-radius: 6px;
+    overflow: hidden;
+
+    button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: none;
+        padding: 6px 10px;
+        cursor: pointer;
+        color: inherit;
+
+        &:hover {
+            background: rgba(127, 127, 127, 0.15);
+        }
+    }
+}
+
+.LinkRobinsBanners-pickerHint {
+    color: var(--muted-color, #999);
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.LinkRobinsBanners-warning {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--alert-error-color, #d83e3e);
+}
+
+.LinkRobinsBanners-tagGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.LinkRobinsBanners-tagChoice {
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    border-radius: 12px;
+    background: none;
+    padding: 3px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    color: inherit;
+
+    &:hover {
+        background: rgba(127, 127, 127, 0.12);
+    }
+
+    &.is-selected {
+        border-color: var(--primary-color, #4083bd);
+        background: var(--primary-color, #4083bd);
+        color: #fff;
+    }
+}
+
+// Icon picker.
 
 .LinkRobinsBanners-iconSetting-controls {
     display: flex;

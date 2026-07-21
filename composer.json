@@ -61,7 +61,7 @@
     },
     "extra": {
         "flarum-extension": {
-            "title": "Discussion Banners",
+            "title": "Link Robins Discussion Banners",
             "category": "feature",
             "icon": {
                 "name": "fas fa-bullhorn",

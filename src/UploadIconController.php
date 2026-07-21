@@ -4,7 +4,6 @@ namespace LinkRobins\DiscussionBanners;
 
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
-use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Contracts\Filesystem\Factory;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -14,14 +13,17 @@ use Psr\Http\Message\UploadedFileInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * POST /api/linkrobins-discussion-banners/{placement}/icon
+ * POST /api/linkrobins-discussion-banners/{banner}/icon
  *
  * Admin-only multipart upload of a banner icon image. Stored on the
- * flarum-assets disk (multi-server / CDN safe); the settings keep the disk
- * PATH and the public URL is resolved at read time. Uploading also switches
- * the placement's icon type to "image" so the icon shows without a separate
- * save. Raster formats only: an <img> never executes SVG scripts, but there
- * is no reason to store markup as an icon either.
+ * flarum-assets disk (multi-server / CDN safe) and the path is handed back to
+ * the admin page, which saves it with the rest of the banner; the public URL
+ * is resolved from that path at read time. Nothing is written to settings
+ * here, so an upload the admin never saves simply stays unreferenced and is
+ * cleaned up by PruneIcons on the next save.
+ *
+ * Raster formats only: an <img> never executes SVG scripts, but there is no
+ * reason to store markup as an icon either.
  */
 final class UploadIconController implements RequestHandlerInterface
 {
@@ -35,7 +37,6 @@ final class UploadIconController implements RequestHandlerInterface
     ];
 
     public function __construct(
-        protected SettingsRepositoryInterface $settings,
         protected Factory $filesystem,
     ) {
     }
@@ -44,9 +45,11 @@ final class UploadIconController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $placement = (string) Arr::get($request->getQueryParams(), 'placement');
-        if (! in_array($placement, BannerSettings::PLACEMENTS, true)) {
-            throw new ValidationException(['icon' => 'Unknown banner placement.']);
+        // The banner id only ever names the file, but it comes from the URL,
+        // so it is restricted to the same characters BannerSettings allows.
+        $banner = (string) Arr::get($request->getQueryParams(), 'banner');
+        if (! preg_match('/^[A-Za-z0-9_-]{1,32}$/', $banner)) {
+            throw new ValidationException(['icon' => 'Unknown banner.']);
         }
 
         $file = Arr::get($request->getUploadedFiles(), 'icon');
@@ -72,32 +75,10 @@ final class UploadIconController implements RequestHandlerInterface
             throw new ValidationException(['icon' => 'The icon must be a PNG, JPEG, GIF or WebP image.']);
         }
 
-        $prefix = BannerSettings::PREFIX.$placement;
         $disk = $this->filesystem->disk('flarum-assets');
-
-        $path = 'linkrobins-discussion-banners/'.$placement.'-'.bin2hex(random_bytes(8)).'.'.$ext;
+        $path = BannerSettings::ICON_DIR.$banner.'-'.bin2hex(random_bytes(8)).'.'.$ext;
         $disk->put($path, $contents);
 
-        // Replace, don't accumulate: drop the previous upload if there was one.
-        // Only ever delete inside our own directory: settings are writable by
-        // any admin through /api/settings, so a hand-edited _icon_path must
-        // not be able to point this delete at some other asset (the logo,
-        // another extension's files, ...).
-        $old = (string) $this->settings->get($prefix.'_icon_path');
-        if ($old !== '' && $old !== $path && str_starts_with($old, 'linkrobins-discussion-banners/')) {
-            try {
-                $disk->delete($old);
-            } catch (\Throwable $e) {
-                // A stale orphan file is not worth failing the upload over.
-            }
-        }
-
-        $this->settings->set($prefix.'_icon_path', $path);
-        $this->settings->set($prefix.'_icon_type', 'image');
-
-        $url = $disk->url($path);
-        $this->settings->set($prefix.'_icon_url', $url);
-
-        return new JsonResponse(['url' => $url, 'path' => $path]);
+        return new JsonResponse(['path' => $path, 'url' => $disk->url($path)]);
     }
 }

@@ -1,10 +1,10 @@
 <?php
 
 use Flarum\Extend;
-use LinkRobins\DiscussionBanners\AddForumBannersV1;
-use LinkRobins\DiscussionBanners\AddForumBannersV2;
+use LinkRobins\DiscussionBanners\AddDiscussionBannersV1;
+use LinkRobins\DiscussionBanners\AddDiscussionBannersV2;
 use LinkRobins\DiscussionBanners\BannerSettings;
-use LinkRobins\DiscussionBanners\DeleteIconController;
+use LinkRobins\DiscussionBanners\PruneIcons;
 use LinkRobins\DiscussionBanners\UploadIconController;
 
 $extenders = [
@@ -19,10 +19,20 @@ $extenders = [
     new Extend\Locales(__DIR__.'/locale'),
 
     (new Extend\Routes('api'))
-        ->post('/linkrobins-discussion-banners/{placement}/icon', 'linkrobins-discussion-banners.icon.upload', UploadIconController::class)
-        ->delete('/linkrobins-discussion-banners/{placement}/icon', 'linkrobins-discussion-banners.icon.delete', DeleteIconController::class),
+        ->post('/linkrobins-discussion-banners/{banner}/icon', 'linkrobins-discussion-banners.icon.upload', UploadIconController::class),
+
+    (new Extend\Event())
+        ->listen(\Flarum\Settings\Event\Saved::class, PruneIcons::class),
 
     (new Extend\Settings())
+        // Every banner lives in this one JSON list, so admins can add as many
+        // as they like without a settings key per banner.
+        ->default(BannerSettings::SETTING, '')
+
+        // The three single-placement banners of 1.0.x. Still declared so an
+        // install that rolls back to 1.0.x keeps its banners: the migration
+        // copies these into the list above, and BannerSettings falls back to
+        // reading them when the list is empty.
         ->default(BannerSettings::PREFIX.'top_enabled', '0')
         ->default(BannerSettings::PREFIX.'top_label', '')
         ->default(BannerSettings::PREFIX.'top_content', '')
@@ -53,17 +63,18 @@ $extenders = [
         ->default(BannerSettings::PREFIX.'stream_every', (string) BannerSettings::DEFAULT_STREAM_EVERY),
 ];
 
-// The forum attribute carrying the viewer's banners is registered through
+// The banners for a discussion are serialized onto that discussion through
 // whichever serialization API this Flarum major provides. Both paths share
-// BannerSettings, so visibility gating is identical.
+// BannerSettings, so audience and discussion targeting are enforced
+// identically, server-side, on either major.
 if (class_exists(Extend\ApiResource::class)) {
     // Flarum 2.x
-    $extenders[] = (new Extend\ApiResource(\Flarum\Api\Resource\ForumResource::class))
-        ->fields(AddForumBannersV2::class);
+    $extenders[] = (new Extend\ApiResource(\Flarum\Api\Resource\DiscussionResource::class))
+        ->fields(AddDiscussionBannersV2::class);
 } elseif (class_exists(Extend\ApiSerializer::class)) {
     // Flarum 1.x
-    $extenders[] = (new Extend\ApiSerializer(\Flarum\Api\Serializer\ForumSerializer::class))
-        ->attributes(AddForumBannersV1::class);
+    $extenders[] = (new Extend\ApiSerializer(\Flarum\Api\Serializer\DiscussionSerializer::class))
+        ->attributes(AddDiscussionBannersV1::class);
 }
 
 return $extenders;

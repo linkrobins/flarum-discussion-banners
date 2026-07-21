@@ -36,7 +36,7 @@ class IconUploadTest extends TestCase
         ]);
     }
 
-    private function uploadRequest(?int $actorId, string $placement, string $bytes, string $clientName): ServerRequestInterface
+    private function uploadRequest(?int $actorId, string $banner, string $bytes, string $clientName): ServerRequestInterface
     {
         $stream = new Stream('php://temp', 'wb+');
         $stream->write($bytes);
@@ -44,14 +44,14 @@ class IconUploadTest extends TestCase
 
         $options = $actorId ? ['authenticatedAs' => $actorId] : [];
 
-        return $this->request('POST', '/api/linkrobins-discussion-banners/'.$placement.'/icon', $options)
+        return $this->request('POST', '/api/linkrobins-discussion-banners/'.$banner.'/icon', $options)
             ->withUploadedFiles(['icon' => new UploadedFile($stream, strlen($bytes), UPLOAD_ERR_OK, $clientName, 'image/png')]);
     }
 
     #[Test]
     public function guests_cannot_upload(): void
     {
-        $response = $this->send($this->uploadRequest(null, 'top', base64_decode(self::PNG_BASE64), 'icon.png'));
+        $response = $this->send($this->uploadRequest(null, 'b1', base64_decode(self::PNG_BASE64), 'icon.png'));
 
         // 400 = the CSRF middleware rejects the unauthenticated write before
         // the controller even runs; 401/403 would be the controller's own
@@ -62,41 +62,45 @@ class IconUploadTest extends TestCase
     #[Test]
     public function regular_users_cannot_upload(): void
     {
-        $response = $this->send($this->uploadRequest(2, 'top', base64_decode(self::PNG_BASE64), 'icon.png'));
+        $response = $this->send($this->uploadRequest(2, 'b1', base64_decode(self::PNG_BASE64), 'icon.png'));
 
         $this->assertEquals(403, $response->getStatusCode());
     }
 
     #[Test]
-    public function admins_can_upload_a_png_and_the_settings_point_at_it(): void
+    public function admins_can_upload_a_png_and_get_its_path_back(): void
     {
-        $response = $this->send($this->uploadRequest(1, 'top', base64_decode(self::PNG_BASE64), 'icon.png'));
+        $response = $this->send($this->uploadRequest(1, 'b1', base64_decode(self::PNG_BASE64), 'icon.png'));
 
         $this->assertEquals(200, $response->getStatusCode());
 
         $body = json_decode($response->getBody()->getContents(), true);
-        $this->assertStringStartsWith('linkrobins-discussion-banners/top-', $body['path']);
+        $this->assertStringStartsWith('linkrobins-discussion-banners/b1-', $body['path']);
         $this->assertStringEndsWith('.png', $body['path']);
+        $this->assertNotEmpty($body['url']);
 
-        $settings = $this->database()->table('settings')->pluck('value', 'key');
-        $this->assertSame($body['path'], $settings['linkrobins-discussion-banners.top_icon_path']);
-        $this->assertSame('image', $settings['linkrobins-discussion-banners.top_icon_type']);
+        // The upload writes no settings: the path is saved with the banner it
+        // belongs to, so an upload the admin abandons changes nothing.
+        $keys = $this->database()->table('settings')->pluck('key');
+        $this->assertNotContains('linkrobins-discussion-banners.banners', $keys->all());
     }
 
     #[Test]
     public function file_bytes_decide_the_type_not_the_client_name(): void
     {
         // Plain text with a .png name and image/png client mime: rejected.
-        $response = $this->send($this->uploadRequest(1, 'top', 'just some text', 'icon.png'));
+        $response = $this->send($this->uploadRequest(1, 'b1', 'just some text', 'icon.png'));
 
         $this->assertEquals(422, $response->getStatusCode());
     }
 
     #[Test]
-    public function unknown_placements_are_rejected(): void
+    public function banner_ids_that_could_escape_the_upload_directory_are_rejected(): void
     {
-        $response = $this->send($this->uploadRequest(1, 'sidebar', base64_decode(self::PNG_BASE64), 'icon.png'));
+        foreach (['..', 'a/b', 'a.b', str_repeat('x', 33)] as $banner) {
+            $response = $this->send($this->uploadRequest(1, urlencode($banner), base64_decode(self::PNG_BASE64), 'icon.png'));
 
-        $this->assertEquals(422, $response->getStatusCode());
+            $this->assertContains($response->getStatusCode(), [404, 422], 'Accepted banner id: '.$banner);
+        }
     }
 }
