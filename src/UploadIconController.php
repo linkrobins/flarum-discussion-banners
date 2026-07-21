@@ -53,7 +53,10 @@ final class UploadIconController implements RequestHandlerInterface
         if (! $file instanceof UploadedFileInterface || $file->getError() !== UPLOAD_ERR_OK) {
             throw new ValidationException(['icon' => 'No icon file was uploaded.']);
         }
-        if ($file->getSize() !== null && $file->getSize() > self::MAX_BYTES) {
+        // Size-check BEFORE reading the stream into memory. A null size never
+        // happens for real SAPI uploads, so treat it as invalid rather than
+        // reading an unbounded stream to find out.
+        if ($file->getSize() === null || $file->getSize() > self::MAX_BYTES) {
             throw new ValidationException(['icon' => 'The icon must be smaller than 2 MB.']);
         }
 
@@ -76,8 +79,12 @@ final class UploadIconController implements RequestHandlerInterface
         $disk->put($path, $contents);
 
         // Replace, don't accumulate: drop the previous upload if there was one.
+        // Only ever delete inside our own directory: settings are writable by
+        // any admin through /api/settings, so a hand-edited _icon_path must
+        // not be able to point this delete at some other asset (the logo,
+        // another extension's files, ...).
         $old = (string) $this->settings->get($prefix.'_icon_path');
-        if ($old !== '' && $old !== $path) {
+        if ($old !== '' && $old !== $path && str_starts_with($old, 'linkrobins-discussion-banners/')) {
             try {
                 $disk->delete($old);
             } catch (\Throwable $e) {

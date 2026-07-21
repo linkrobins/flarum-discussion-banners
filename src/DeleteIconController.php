@@ -37,8 +37,11 @@ final class DeleteIconController implements RequestHandlerInterface
 
         $prefix = BannerSettings::PREFIX.$placement;
 
+        // Only ever delete inside our own directory (see UploadIconController:
+        // settings are admin-writable, so _icon_path can't be trusted to
+        // point at our file).
         $old = (string) $this->settings->get($prefix.'_icon_path');
-        if ($old !== '') {
+        if ($old !== '' && str_starts_with($old, 'linkrobins-discussion-banners/')) {
             try {
                 $this->filesystem->disk('flarum-assets')->delete($old);
             } catch (\Throwable $e) {

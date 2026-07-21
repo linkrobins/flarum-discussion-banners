@@ -77,6 +77,9 @@ function registerIconSetting(registry, placement, label, trans, priority) {
     const currentUrl = uploadedIconUrl[placement] || savedUrl;
     const apiBase = app.forum.attribute('apiUrl') + '/linkrobins-discussion-banners/' + encodeURIComponent(placement) + '/icon';
 
+    // A failed request must not fail silently (an oversized file would look
+    // like a dead button). app.request already shows Flarum's error alert for
+    // API errors on both majors; the catch just keeps the page state sane.
     const uploadIcon = (file) => {
       if (!file) return;
       const body = new FormData();
@@ -88,7 +91,7 @@ function registerIconSetting(registry, placement, label, trans, priority) {
           typeStream('image');
           m.redraw();
         })
-        .catch(() => {});
+        .catch(() => m.redraw());
     };
 
     const removeIcon = () => {
@@ -99,7 +102,7 @@ function registerIconSetting(registry, placement, label, trans, priority) {
           typeStream('');
           m.redraw();
         })
-        .catch(() => {});
+        .catch(() => m.redraw());
     };
 
     let detail = null;

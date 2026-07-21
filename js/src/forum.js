@@ -125,6 +125,10 @@ function extendMethod(proto, method, callback) {
 window.app.initializers.add(EXT_ID, () => {
   onCoreModule('forum/components/PostStream', (PostStream) => {
     if (!PostStream || !PostStream.prototype) return;
+    // Never wrap view twice (a re-fired module callback would otherwise
+    // duplicate every banner).
+    if (PostStream.prototype._lrBannersPatched) return;
+    PostStream.prototype._lrBannersPatched = true;
 
     extendMethod(PostStream.prototype, 'view', function (vnode) {
       const all = banners();
