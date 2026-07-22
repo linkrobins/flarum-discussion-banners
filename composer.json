@@ -64,7 +64,7 @@
             "title": "Link Robins Discussion Banners",
             "category": "feature",
             "icon": {
-                "name": "fas fa-bullhorn",
+                "name": "fas fa-sign",
                 "color": "#07adcc",
                 "backgroundColor": "#1a2535"
             }
