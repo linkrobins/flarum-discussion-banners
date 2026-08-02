@@ -6,10 +6,9 @@
 // settings pages invoke function entries with `this` = the extension page,
 // whose setting() streams feed the regular Save button.
 //
-// Like the forum bundle, this imports nothing from flarum/* and feature-
-// detects the globals instead, so one artifact runs on Flarum 1.8 and 2.x.
-// The only difference between the majors here is the registry object
-// (app.registry in 2.x, app.extensionData in 1.x).
+// Like the forum bundle, this imports nothing from flarum/* and reads the
+// globals instead, which keeps it free of build-time coupling to core's
+// module layout. The settings registry on this major is app.registry.
 
 const EXT_ID = 'linkrobins-discussion-banners';
 const PREFIX = EXT_ID + '.';
@@ -33,7 +32,7 @@ const tags = { status: 'idle', list: [] };
 
 const trans = (key, params) => window.app.translator.trans(EXT_ID + '.admin.settings.' + key, params);
 
-// Resolve a core component on either major (2.x registry / 1.x compat map).
+// Resolve a core component from the module registry.
 function coreComponent(path) {
   const unwrap = (mod) => (mod && mod.default ? mod.default : mod);
   try {
@@ -42,10 +41,6 @@ function coreComponent(path) {
       const mod = reg.get('core', path);
       if (mod) return unwrap(mod);
     }
-  } catch (e) {}
-  try {
-    const compat = window.flarum && window.flarum.core && window.flarum.core.compat;
-    if (compat && compat[path]) return unwrap(compat[path]);
   } catch (e) {}
   return null;
 }
@@ -666,9 +661,7 @@ window.app.initializers.add(EXT_ID, () => {
   let registry = null;
   try {
     if (app.registry && typeof app.registry.for === 'function') {
-      registry = app.registry.for(EXT_ID); // Flarum 2.x
-    } else if (app.extensionData && typeof app.extensionData.for === 'function') {
-      registry = app.extensionData.for(EXT_ID); // Flarum 1.x
+      registry = app.registry.for(EXT_ID);
     }
   } catch (e) {}
 

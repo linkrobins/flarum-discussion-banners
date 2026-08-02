@@ -95,21 +95,16 @@ function bannerItem(key, banner, variant) {
   );
 }
 
-// Resolve a core component on either major: 2.x exposes lazy-chunk modules
-// through flarum.reg.onLoad (fires when the chunk loads, or immediately if
-// already in); 1.x ships everything eagerly in flarum.core.compat.
+// Resolve a core component. The components patched here live in lazy chunks,
+// so they cannot simply be imported: reg.onLoad fires when the chunk loads, or
+// immediately if it is already in.
 function onCoreModule(path, callback) {
   const unwrap = (mod) => (mod && mod.default ? mod.default : mod);
   try {
     const reg = window.flarum && window.flarum.reg;
     if (reg && typeof reg.onLoad === 'function') {
       reg.onLoad('core', path, (mod) => callback(unwrap(mod)));
-      return;
     }
-  } catch (e) {}
-  try {
-    const compat = window.flarum && window.flarum.core && window.flarum.core.compat;
-    if (compat && compat[path]) callback(unwrap(compat[path]));
   } catch (e) {}
 }
 
