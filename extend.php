@@ -2,7 +2,6 @@
 
 use Flarum\Extend;
 use LinkRobins\DiscussionBanners\AddDiscussionBannersV1;
-use LinkRobins\DiscussionBanners\AddDiscussionBannersV2;
 use LinkRobins\DiscussionBanners\BannerSettings;
 use LinkRobins\DiscussionBanners\PruneIcons;
 use LinkRobins\DiscussionBanners\UploadIconController;
@@ -63,18 +62,10 @@ $extenders = [
         ->default(BannerSettings::PREFIX.'stream_every', (string) BannerSettings::DEFAULT_STREAM_EVERY),
 ];
 
-// The banners for a discussion are serialized onto that discussion through
-// whichever serialization API this Flarum major provides. Both paths share
-// BannerSettings, so audience and discussion targeting are enforced
-// identically, server-side, on either major.
-if (class_exists(Extend\ApiResource::class)) {
-    // Flarum 2.x
-    $extenders[] = (new Extend\ApiResource(\Flarum\Api\Resource\DiscussionResource::class))
-        ->fields(AddDiscussionBannersV2::class);
-} elseif (class_exists(Extend\ApiSerializer::class)) {
-    // Flarum 1.x
-    $extenders[] = (new Extend\ApiSerializer(\Flarum\Api\Serializer\DiscussionSerializer::class))
-        ->attributes(AddDiscussionBannersV1::class);
-}
+// The banners for a discussion are serialized onto that discussion. Audience
+// and discussion targeting are enforced inside BannerSettings, server-side, so
+// the payload only ever carries banners the actor is allowed to see.
+$extenders[] = (new Extend\ApiSerializer(\Flarum\Api\Serializer\DiscussionSerializer::class))
+    ->attributes(AddDiscussionBannersV1::class);
 
 return $extenders;
