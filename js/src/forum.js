@@ -15,6 +15,14 @@ import DOMPurify from 'dompurify';
 // are looked up (2.x lazy-chunk registry vs the 1.x compat map); everything
 // else is version-neutral.
 
+import app from 'flarum/forum/app';
+import { extend } from 'flarum/common/extend';
+
+// Mithril is the global Flarum exposes, and core's own JSX compiles to these
+// same `m(...)` calls. Deliberately not imported: flarum-webpack-config does
+// not externalize mithril, so an import would bundle a second copy of it.
+const m = window.m;
+
 const EXT_ID = 'linkrobins-discussion-banners';
 const ATTR = 'linkrobinsDiscussionBanners';
 
@@ -48,7 +56,6 @@ function sanitize(html) {
 // The optional icon beside the content: an admin-uploaded image (served from
 // the assets disk) or an emoji rendered as plain text (never trusted HTML).
 function bannerIcon(banner) {
-  const m = window.m;
   const icon = banner.icon;
   if (!icon) return null;
   if (icon.type === 'image' && icon.url) {
@@ -61,7 +68,6 @@ function bannerIcon(banner) {
 }
 
 function bannerCard(banner, variant) {
-  const m = window.m;
   const icon = bannerIcon(banner);
   const content = m('div', { className: 'LinkRobinsBanners-content' }, m.trust(sanitize(banner.contentHtml || '')));
 
@@ -84,7 +90,6 @@ function bannerCard(banner, variant) {
 // A spliced stream row. PostStream renders a keyed list, so every row we
 // insert must carry a key of its own.
 function bannerItem(key, banner, variant) {
-  const m = window.m;
   return m(
     'div',
     {
@@ -95,89 +100,60 @@ function bannerItem(key, banner, variant) {
   );
 }
 
-// Resolve a core component. The components patched here live in lazy chunks,
-// so they cannot simply be imported: reg.onLoad fires when the chunk loads, or
-// immediately if it is already in.
-function onCoreModule(path, callback) {
-  const unwrap = (mod) => (mod && mod.default ? mod.default : mod);
-  try {
-    const reg = window.flarum && window.flarum.reg;
-    if (reg && typeof reg.onLoad === 'function') {
-      reg.onLoad('core', path, (mod) => callback(unwrap(mod)));
-    }
-  } catch (e) {}
-}
+app.initializers.add(EXT_ID, () => {
+  // PostStream lives in a lazy chunk, so it is extended BY STRING PATH: a
+  // runtime import would force that chunk to load eagerly and defeat core's
+  // code splitting.
+  extend('flarum/forum/components/PostStream', 'view', function (vnode) {
+    if (!vnode || !Array.isArray(vnode.children)) return;
 
-// Minimal `extend()` so we don't depend on flarum/common/extend resolving the
-// same way on both majors.
-function extendMethod(proto, method, callback) {
-  const original = proto[method];
-  proto[method] = function (...args) {
-    const value = original.apply(this, args);
-    callback.call(this, value, ...args);
-    return value;
-  };
-}
+    // Set in PostStream's oninit on both majors; the attrs are the fallback.
+    const discussion = this.discussion || (this.attrs && this.attrs.discussion);
+    const all = bannersFor(discussion);
+    if (!all.length) return;
 
-window.app.initializers.add(EXT_ID, () => {
-  onCoreModule('forum/components/PostStream', (PostStream) => {
-    if (!PostStream || !PostStream.prototype) return;
-    // Never wrap view twice (a re-fired module callback would otherwise
-    // duplicate every banner).
-    if (PostStream.prototype._lrBannersPatched) return;
-    PostStream.prototype._lrBannersPatched = true;
+    const tops = all.filter((b) => b.placement === 'top');
+    const bottoms = all.filter((b) => b.placement === 'bottom');
+    const streams = all.filter((b) => b.placement === 'stream');
 
-    extendMethod(PostStream.prototype, 'view', function (vnode) {
-      if (!vnode || !Array.isArray(vnode.children)) return;
+    // Total number of stream entries, for anchoring bottom banners to the
+    // discussion's ABSOLUTE last post (the stream only renders a window of a
+    // long discussion at a time).
+    const state = this.stream || (this.attrs && this.attrs.stream);
+    const total = state && typeof state.count === 'function' ? state.count() : null;
 
-      // Set in PostStream's oninit on both majors; the attrs are the fallback.
-      const discussion = this.discussion || (this.attrs && this.attrs.discussion);
-      const all = bannersFor(discussion);
-      if (!all.length) return;
+    const children = vnode.children;
+    const out = [];
 
-      const tops = all.filter((b) => b.placement === 'top');
-      const bottoms = all.filter((b) => b.placement === 'bottom');
-      const streams = all.filter((b) => b.placement === 'stream');
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
 
-      // Total number of stream entries, for anchoring bottom banners to the
-      // discussion's ABSOLUTE last post (the stream only renders a window of a
-      // long discussion at a time).
-      const state = this.stream || (this.attrs && this.attrs.stream);
-      const total = state && typeof state.count === 'function' ? state.count() : null;
-
-      const children = vnode.children;
-      const out = [];
-
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-
-        // Only anchor to REAL posts: the reply placeholder is also a
-        // .PostStream-item with a data-index but no data-number, and without
-        // this guard a banner could land below the composer.
-        const isPost = child && child.attrs && child.attrs['data-index'] !== undefined && child.attrs['data-number'] !== undefined;
-        if (!isPost) {
-          out.push(child);
-          continue;
-        }
-
-        const index = Number(child.attrs['data-index']);
-
-        if (index === 0) tops.forEach((b) => out.push(bannerItem(b.id + '-top', b, 'top')));
-
+      // Only anchor to REAL posts: the reply placeholder is also a
+      // .PostStream-item with a data-index but no data-number, and without
+      // this guard a banner could land below the composer.
+      const isPost = child && child.attrs && child.attrs['data-index'] !== undefined && child.attrs['data-number'] !== undefined;
+      if (!isPost) {
         out.push(child);
-
-        streams.forEach((b) => {
-          // Suppressed on the last post so it never stacks with a bottom banner.
-          if ((index + 1) % b.every === 0 && (total === null || index < total - 1)) {
-            out.push(bannerItem(b.id + '-' + index, b, 'stream'));
-          }
-        });
-
-        if (total !== null && index === total - 1) bottoms.forEach((b) => out.push(bannerItem(b.id + '-bottom', b, 'bottom')));
+        continue;
       }
 
-      // Replace in place: the caller keeps the vnode we were handed.
-      children.splice(0, children.length, ...out);
-    });
+      const index = Number(child.attrs['data-index']);
+
+      if (index === 0) tops.forEach((b) => out.push(bannerItem(b.id + '-top', b, 'top')));
+
+      out.push(child);
+
+      streams.forEach((b) => {
+        // Suppressed on the last post so it never stacks with a bottom banner.
+        if ((index + 1) % b.every === 0 && (total === null || index < total - 1)) {
+          out.push(bannerItem(b.id + '-' + index, b, 'stream'));
+        }
+      });
+
+      if (total !== null && index === total - 1) bottoms.forEach((b) => out.push(bannerItem(b.id + '-bottom', b, 'bottom')));
+    }
+
+    // Replace in place: the caller keeps the vnode we were handed.
+    children.splice(0, children.length, ...out);
   });
 });

@@ -6,9 +6,18 @@
 // settings pages invoke function entries with `this` = the extension page,
 // whose setting() streams feed the regular Save button.
 //
-// Like the forum bundle, this imports nothing from flarum/* and reads the
-// globals instead, which keeps it free of build-time coupling to core's
-// module layout. The settings registry on this major is app.registry.
+// Two core components are imported for rendering rather than resolved through
+// the registry by hand; both are common components that the admin app has
+// already loaded by the time this page draws.
+
+import app from 'flarum/admin/app';
+import ColorPreviewInput from 'flarum/common/components/ColorPreviewInput';
+import Switch from 'flarum/common/components/Switch';
+
+// Mithril is the global Flarum exposes, and core's own JSX compiles to these
+// same `m(...)` calls. Deliberately not imported: flarum-webpack-config does
+// not externalize mithril, so an import would bundle a second copy of it.
+const m = window.m;
 
 const EXT_ID = 'linkrobins-discussion-banners';
 const PREFIX = EXT_ID + '.';
@@ -30,23 +39,11 @@ const searches = {};
 // A forum without flarum/tags simply has no tag section.
 const tags = { status: 'idle', list: [] };
 
-const trans = (key, params) => window.app.translator.trans(EXT_ID + '.admin.settings.' + key, params);
+const trans = (key, params) => app.translator.trans(EXT_ID + '.admin.settings.' + key, params);
 
 // Resolve a core component from the module registry.
-function coreComponent(path) {
-  const unwrap = (mod) => (mod && mod.default ? mod.default : mod);
-  try {
-    const reg = window.flarum && window.flarum.reg;
-    if (reg && typeof reg.get === 'function') {
-      const mod = reg.get('core', path);
-      if (mod) return unwrap(mod);
-    }
-  } catch (e) {}
-  return null;
-}
-
 function apiUrl(path) {
-  return window.app.forum.attribute('apiUrl') + path;
+  return app.forum.attribute('apiUrl') + path;
 }
 
 function newId() {
@@ -95,7 +92,7 @@ function complete(rule, index) {
 // install whose update migration hasn't run yet. Saving converts them for
 // good, exactly as the migration would have.
 function legacyRules() {
-  const settings = (window.app.data && window.app.data.settings) || {};
+  const settings = (app.data && app.data.settings) || {};
   const rules = [];
 
   PLACEMENTS.forEach((placement) => {
@@ -156,18 +153,18 @@ function loadTags() {
   if (tags.status !== 'idle') return;
   tags.status = 'loading';
 
-  window.app
+  app
     .request({ method: 'GET', url: apiUrl('/tags') })
     .then((doc) => {
       tags.list = ((doc && doc.data) || []).map((tag) => ({ id: Number(tag.id), name: (tag.attributes && tag.attributes.name) || '#' + tag.id }));
       tags.status = 'ready';
-      window.m.redraw();
+      m.redraw();
     })
     .catch(() => {
       // No tags extension (or no permission to list them): the tag section
       // simply doesn't appear.
       tags.status = 'unavailable';
-      window.m.redraw();
+      m.redraw();
     });
 }
 
@@ -191,7 +188,7 @@ function searchDiscussions(id, term) {
   state.timer = setTimeout(() => {
     const url = apiUrl('/discussions') + '?filter%5Bq%5D=' + encodeURIComponent(term.trim()) + '&page%5Blimit%5D=6';
 
-    window.app
+    app
       .request({ method: 'GET', url })
       .then((doc) => {
         // Ignore a response that lost the race with newer typing.
@@ -200,13 +197,13 @@ function searchDiscussions(id, term) {
           .filter((entry) => entry.type === 'discussions')
           .map((entry) => ({ id: Number(entry.id), title: (entry.attributes && entry.attributes.title) || '#' + entry.id }));
         state.loading = false;
-        window.m.redraw();
+        m.redraw();
       })
       .catch(() => {
         if (state.term !== term) return;
         state.results = [];
         state.loading = false;
-        window.m.redraw();
+        m.redraw();
       });
   }, 300);
 }
@@ -230,7 +227,6 @@ function removeTarget(page, rule, field, id) {
 }
 
 function chip(text, onRemove) {
-  const m = window.m;
   return m('span', { className: 'LinkRobinsBanners-chip' }, [
     m('span', { className: 'LinkRobinsBanners-chipLabel' }, text),
     m('button', { type: 'button', className: 'LinkRobinsBanners-chipRemove', onclick: onRemove, 'aria-label': trans('target_remove') }, '×'),
@@ -238,7 +234,6 @@ function chip(text, onRemove) {
 }
 
 function discussionPicker(page, rule) {
-  const m = window.m;
   const state = searchState(rule.id);
   const id = pastedId(state.term);
 
@@ -251,16 +246,16 @@ function discussionPicker(page, rule) {
   // Resolve the title so the chip reads like the others; the id is what
   // matters, so a failed lookup still adds the target.
   const pickById = (discussionId) => {
-    window.app
+    app
       .request({ method: 'GET', url: apiUrl('/discussions/' + discussionId) })
       .then((doc) => {
         const title = doc && doc.data && doc.data.attributes && doc.data.attributes.title;
         pick({ id: discussionId, title: title || '#' + discussionId });
-        window.m.redraw();
+        m.redraw();
       })
       .catch(() => {
         pick({ id: discussionId, title: '#' + discussionId });
-        window.m.redraw();
+        m.redraw();
       });
   };
 
@@ -293,8 +288,6 @@ function discussionPicker(page, rule) {
 }
 
 function tagPicker(page, rule) {
-  const m = window.m;
-
   loadTags();
 
   if (tags.status === 'loading') return m('div', { className: 'LinkRobinsBanners-pickerHint' }, trans('target_tags_loading'));
@@ -326,8 +319,6 @@ function tagPicker(page, rule) {
 }
 
 function targeting(page, rule) {
-  const m = window.m;
-
   const empty = rule.scope !== 'all' && !(rule.discussions || []).length && !(rule.tags || []).length;
 
   return m('div', { className: 'Form-group' }, [
@@ -355,8 +346,6 @@ function targeting(page, rule) {
 // Core's styled select markup (wrapper + caret icon), so the control looks
 // like every other dropdown on the page.
 function select(value, options, onchange) {
-  const m = window.m;
-
   return m('span', { className: 'Select' }, [
     m(
       'select',
@@ -368,7 +357,6 @@ function select(value, options, onchange) {
 }
 
 function field(label, help, control) {
-  const m = window.m;
   return m('div', { className: 'Form-group' }, [m('label', label), help ? m('div', { className: 'helpText' }, help) : null, control]);
 }
 
@@ -377,8 +365,6 @@ function field(label, help, control) {
 // heading derive from it on the forum side, so one color stays readable on
 // light and dark themes (unlike separate border/background/text pickers).
 function colorField(page, rule) {
-  const m = window.m;
-  const ColorPreviewInput = coreComponent('common/components/ColorPreviewInput');
   const attrs = {
     className: 'FormControl',
     placeholder: '#1ec3d6',
@@ -399,8 +385,6 @@ function colorField(page, rule) {
 // like every other field, and uploads no banner ends up referring to are
 // cleaned up server-side on the next save.
 function iconField(page, rule) {
-  const m = window.m;
-  const app = window.app;
   const icon = rule.icon || {};
   const setIcon = (patch) => update(page, rule.id, { icon: Object.assign({}, icon, patch) });
 
@@ -523,8 +507,6 @@ function summary(rule) {
 }
 
 function bannerCard(page, rule) {
-  const m = window.m;
-  const Switch = coreComponent('common/components/Switch');
   const open = !!expanded[rule.id];
 
   const remove = () => {
@@ -625,7 +607,6 @@ function bannerCard(page, rule) {
 // ------------------------------------------------------------------- entry
 
 function editor() {
-  const m = window.m;
   const page = this;
   if (!page || typeof page.setting !== 'function') return null;
 
@@ -655,9 +636,7 @@ function editor() {
   ]);
 }
 
-window.app.initializers.add(EXT_ID, () => {
-  const app = window.app;
-
+app.initializers.add(EXT_ID, () => {
   let registry = null;
   try {
     if (app.registry && typeof app.registry.for === 'function') {
