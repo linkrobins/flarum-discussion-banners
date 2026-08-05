@@ -5,3 +5,4 @@ js/dist/*.map
 .phpunit.cache
 tests/.phpunit.cache
 tests/integration/tmp
+tests/.phpunit.result.cache
