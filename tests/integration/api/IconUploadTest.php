@@ -48,6 +48,7 @@ class IconUploadTest extends TestCase
             ->withUploadedFiles(['icon' => new UploadedFile($stream, strlen($bytes), UPLOAD_ERR_OK, $clientName, 'image/png')]);
     }
 
+    /** @test */
     #[Test]
     public function guests_cannot_upload(): void
     {
@@ -59,6 +60,7 @@ class IconUploadTest extends TestCase
         $this->assertContains($response->getStatusCode(), [400, 401, 403]);
     }
 
+    /** @test */
     #[Test]
     public function regular_users_cannot_upload(): void
     {
@@ -67,6 +69,7 @@ class IconUploadTest extends TestCase
         $this->assertEquals(403, $response->getStatusCode());
     }
 
+    /** @test */
     #[Test]
     public function admins_can_upload_a_png_and_get_its_path_back(): void
     {
@@ -85,6 +88,7 @@ class IconUploadTest extends TestCase
         $this->assertNotContains('linkrobins-discussion-banners.banners', $keys->all());
     }
 
+    /** @test */
     #[Test]
     public function file_bytes_decide_the_type_not_the_client_name(): void
     {
@@ -94,6 +98,7 @@ class IconUploadTest extends TestCase
         $this->assertEquals(422, $response->getStatusCode());
     }
 
+    /** @test */
     #[Test]
     public function banner_ids_that_could_escape_the_upload_directory_are_rejected(): void
     {

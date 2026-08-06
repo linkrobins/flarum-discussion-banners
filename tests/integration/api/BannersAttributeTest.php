@@ -66,6 +66,7 @@ class BannersAttributeTest extends TestCase
         return array_column($attributes['linkrobinsDiscussionBanners'], 'id');
     }
 
+    /** @test */
     #[Test]
     public function a_banner_targeted_at_a_discussion_is_only_sent_for_that_discussion(): void
     {
@@ -73,6 +74,7 @@ class BannersAttributeTest extends TestCase
         $this->assertSame(['everywhere'], $this->bannerIds(2, null));
     }
 
+    /** @test */
     #[Test]
     public function members_only_banners_are_hidden_from_guests_and_shown_to_members(): void
     {
@@ -80,12 +82,14 @@ class BannersAttributeTest extends TestCase
         $this->assertContains('members', $this->bannerIds(1, 2));
     }
 
+    /** @test */
     #[Test]
     public function disabled_banners_are_never_sent(): void
     {
         $this->assertNotContains('off', $this->bannerIds(1, 1));
     }
 
+    /** @test */
     #[Test]
     public function tag_targeting_matches_nothing_when_tags_are_not_installed(): void
     {
@@ -94,6 +98,7 @@ class BannersAttributeTest extends TestCase
         $this->assertNotContains('tagged', $this->bannerIds(1, 1));
     }
 
+    /** @test */
     #[Test]
     public function the_discussion_list_does_not_carry_banner_html(): void
     {
@@ -112,6 +117,7 @@ class BannersAttributeTest extends TestCase
         $this->assertStringNotContainsString('Hello', json_encode($body));
     }
 
+    /** @test */
     #[Test]
     public function banners_configured_on_1_0_still_serialize_before_the_migration_runs(): void
     {

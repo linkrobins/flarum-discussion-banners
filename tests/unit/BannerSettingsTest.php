@@ -54,12 +54,14 @@ class BannerSettingsTest extends TestCase
         ];
     }
 
+    /** @test */
     #[Test]
     public function nothing_is_returned_by_default(): void
     {
         $this->assertSame([], $this->settings([])->visibleIn(true, 1));
     }
 
+    /** @test */
     #[Test]
     public function an_enabled_banner_with_content_is_returned(): void
     {
@@ -71,6 +73,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame('a', $result[0]['id']);
     }
 
+    /** @test */
     #[Test]
     public function disabled_or_empty_banners_are_skipped(): void
     {
@@ -78,6 +81,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame([], $this->banners([$this->rule(['content' => '   '])]));
     }
 
+    /** @test */
     #[Test]
     public function several_banners_can_share_a_placement(): void
     {
@@ -89,6 +93,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame(['first', 'second'], array_column($result, 'contentHtml'));
     }
 
+    /** @test */
     #[Test]
     public function members_only_banners_are_hidden_from_guests_and_vice_versa(): void
     {
@@ -101,6 +106,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame(['members'], array_column($this->banners($rules, false), 'contentHtml'));
     }
 
+    /** @test */
     #[Test]
     public function a_banner_scoped_to_chosen_discussions_appears_only_there(): void
     {
@@ -112,6 +118,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame([], $this->banners($rules, true, null));
     }
 
+    /** @test */
     #[Test]
     public function the_admin_page_stores_targets_as_objects_with_titles(): void
     {
@@ -122,6 +129,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame([], $this->banners($rules, true, 45));
     }
 
+    /** @test */
     #[Test]
     public function an_excluded_discussion_gets_everything_else(): void
     {
@@ -131,6 +139,7 @@ class BannerSettingsTest extends TestCase
         $this->assertCount(1, $this->banners($rules, true, 9));
     }
 
+    /** @test */
     #[Test]
     public function tag_targeting_matches_the_discussions_tags(): void
     {
@@ -141,6 +150,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame([], $this->banners($rules, true, 9, fn () => [7]));
     }
 
+    /** @test */
     #[Test]
     public function tags_are_only_resolved_when_a_banner_targets_them(): void
     {
@@ -161,6 +171,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame(1, $resolved, 'Tags must be resolved once per request, not once per banner.');
     }
 
+    /** @test */
     #[Test]
     public function targeting_nothing_shows_nothing(): void
     {
@@ -168,6 +179,7 @@ class BannerSettingsTest extends TestCase
         $this->assertCount(1, $this->banners([$this->rule(['scope' => 'except'])], true, 44));
     }
 
+    /** @test */
     #[Test]
     public function only_strict_hex_colors_are_serialized(): void
     {
@@ -177,6 +189,7 @@ class BannerSettingsTest extends TestCase
         $this->assertArrayNotHasKey('color', $this->banners([$this->rule(['color' => '#abc; color: red'])])[0]);
     }
 
+    /** @test */
     #[Test]
     public function emoji_icons_are_trimmed_and_length_capped(): void
     {
@@ -187,6 +200,7 @@ class BannerSettingsTest extends TestCase
         $this->assertNull($icon(' '));
     }
 
+    /** @test */
     #[Test]
     public function image_icons_outside_our_own_directory_are_dropped(): void
     {
@@ -198,6 +212,7 @@ class BannerSettingsTest extends TestCase
         $this->assertArrayNotHasKey('icon', $this->banners($rules)[0]);
     }
 
+    /** @test */
     #[Test]
     public function the_stream_cadence_is_clamped_to_a_sane_minimum(): void
     {
@@ -209,12 +224,14 @@ class BannerSettingsTest extends TestCase
         $this->assertSame(BannerSettings::DEFAULT_STREAM_EVERY, $every(-3));
     }
 
+    /** @test */
     #[Test]
     public function only_the_stream_placement_carries_a_cadence(): void
     {
         $this->assertArrayNotHasKey('every', $this->banners([$this->rule()])[0]);
     }
 
+    /** @test */
     #[Test]
     public function unparseable_or_hand_broken_values_never_throw(): void
     {
@@ -223,6 +240,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame([], $this->settings(['banners' => '[1, 2, null]'])->visibleIn(true, 1));
     }
 
+    /** @test */
     #[Test]
     public function banners_configured_on_1_0_are_still_read_before_the_migration_runs(): void
     {
@@ -247,6 +265,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame([], $converted);
     }
 
+    /** @test */
     #[Test]
     public function the_1_0_conversion_keeps_every_placement_and_targets_everything(): void
     {
@@ -266,6 +285,7 @@ class BannerSettingsTest extends TestCase
         $this->assertSame(BannerSettings::ICON_DIR.'stream-abc.png', $rules[1]['icon']['path']);
     }
 
+    /** @test */
     #[Test]
     public function icon_paths_lists_what_is_still_in_use(): void
     {
