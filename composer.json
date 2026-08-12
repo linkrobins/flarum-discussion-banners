@@ -17,12 +17,12 @@
     },
     "authors": [
         {
-            "name": "Karl Bullock",
+            "name": "Link Robins",
             "email": "karl@linkrobins.com"
         }
     ],
     "require": {
-        "php": ">=8.0",
+        "php": "^8.3",
         "flarum/core": "^2.0"
     },
     "require-dev": {
