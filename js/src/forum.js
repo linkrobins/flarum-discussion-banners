@@ -112,7 +112,13 @@ app.initializers.add(EXT_ID, () => {
     const all = bannersFor(discussion);
     if (!all.length) return;
 
-    const tops = all.filter((b) => b.placement === 'top');
+    // Top banners are rendered by the DiscussionPage extender below, NOT here.
+    // Inserting one before the first post makes that post stop being the
+    // stream's :first-child, and core's scrollToItem() only scrolls to the top
+    // of the PAGE for a first child; for anything else it scrolls to the item
+    // itself, which puts the banner above the fold. Whether that happened came
+    // down to whether the banner had rendered before core measured, so it hit
+    // roughly every other load.
     const bottoms = all.filter((b) => b.placement === 'bottom');
     const streams = all.filter((b) => b.placement === 'stream');
 
@@ -139,8 +145,6 @@ app.initializers.add(EXT_ID, () => {
 
       const index = Number(child.attrs['data-index']);
 
-      if (index === 0) tops.forEach((b) => out.push(bannerItem(b.id + '-top', b, 'top')));
-
       out.push(child);
 
       streams.forEach((b) => {
@@ -155,5 +159,35 @@ app.initializers.add(EXT_ID, () => {
 
     // Replace in place: the caller keeps the vnode we were handed.
     children.splice(0, children.length, ...out);
+  });
+
+  // Top banners sit above the post stream rather than inside it, so the first
+  // post stays the stream's :first-child and core keeps scrolling to the top of
+  // the page on load. See the note in the PostStream extender above.
+  extend('flarum/forum/components/DiscussionPage', 'view', function (vnode) {
+    if (!vnode || !Array.isArray(vnode.children)) return;
+
+    const discussion = this.discussion;
+    if (!discussion) return;
+
+    const tops = bannersFor(discussion).filter((b) => b.placement === 'top');
+    if (!tops.length) return;
+
+    // While the page is loading its children are falsy, and a banner floating
+    // over a spinner helps nobody.
+    const hasStream = vnode.children.some((c) => c && c.attrs && /DiscussionPage-stream/.test(c.attrs.className || ''));
+    if (!hasStream) return;
+
+    vnode.children.unshift(
+      m(
+        'div',
+        // No key: its sibling is core's unkeyed stream div, and Mithril refuses
+        // a children array that mixes keyed and unkeyed vnodes.
+        { className: 'LinkRobinsBanners-pageTop' },
+        tops.map((b) =>
+          m('div', { className: 'LinkRobinsBanners-item LinkRobinsBanners-item--top', key: 'lrBanners-' + b.id + '-top' }, bannerCard(b, 'top'))
+        )
+      )
+    );
   });
 });
