@@ -181,7 +181,9 @@ app.initializers.add(EXT_ID, () => {
     vnode.children.unshift(
       m(
         'div',
-        { className: 'LinkRobinsBanners-pageTop', key: 'lrBanners-pageTop' },
+        // No key: its sibling is core's unkeyed stream div, and Mithril refuses
+        // a children array that mixes keyed and unkeyed vnodes.
+        { className: 'LinkRobinsBanners-pageTop' },
         tops.map((b) => m('div', { className: 'LinkRobinsBanners-item LinkRobinsBanners-item--top', key: 'lrBanners-' + b.id + '-top' }, bannerCard(b, 'top')))
       )
     );
