@@ -91,3 +91,13 @@
     .LinkRobinsBanners-iconImage { height: 40px; }
     .LinkRobinsBanners-iconEmoji { font-size: 26px; }
 }
+
+// Top banners live above the post stream now, not inside it, so they no longer
+// inherit .PostStream-item's spacing and carry their own.
+.LinkRobinsBanners-pageTop {
+    margin-bottom: 16px;
+
+    > .LinkRobinsBanners-item + .LinkRobinsBanners-item {
+        margin-top: 12px;
+    }
+}
