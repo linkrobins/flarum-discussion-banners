@@ -61,7 +61,7 @@
     },
     "extra": {
         "flarum-extension": {
-            "title": "Link Robins Discussion Banners",
+            "title": "LR Banners",
             "category": "feature",
             "icon": {
                 "name": "fas fa-sign",
