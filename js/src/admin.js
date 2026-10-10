@@ -23,7 +23,9 @@ const EXT_ID = 'linkrobins-discussion-banners';
 const PREFIX = EXT_ID + '.';
 const KEY = PREFIX + 'banners';
 
-const PLACEMENTS = ['top', 'bottom', 'stream'];
+const PLACEMENTS = ['top', 'first', 'bottom', 'stream'];
+// What 1.0.x stored as separate settings. Frozen: never grows.
+const LEGACY_PLACEMENTS = ['top', 'bottom', 'stream'];
 const SCOPES = ['all', 'only', 'except'];
 
 // A modest, deliberately common set; anything else can be typed or pasted
@@ -95,7 +97,7 @@ function legacyRules() {
   const settings = (app.data && app.data.settings) || {};
   const rules = [];
 
-  PLACEMENTS.forEach((placement) => {
+  LEGACY_PLACEMENTS.forEach((placement) => {
     const get = (key) => settings[PREFIX + placement + key] || '';
 
     if (!truthy(get('_enabled')) && !String(get('_content')).trim()) return;
@@ -650,4 +652,14 @@ app.initializers.add(EXT_ID, () => {
   }
 
   registry.registerSetting(editor, 100);
+
+  registry.registerSetting(
+    {
+      setting: PREFIX + 'most_specific',
+      type: 'boolean',
+      label: trans('most_specific_label'),
+      help: trans('most_specific_help'),
+    },
+    90
+  );
 });

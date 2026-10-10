@@ -83,8 +83,11 @@
 // Placement spacing. Each banner is spliced into the post stream as its own
 // .PostStream-item, so it only needs vertical margins.
 .LinkRobinsBanners-item--top .LinkRobinsBanners-card    { margin-bottom: 20px; }
-.LinkRobinsBanners-item--bottom .LinkRobinsBanners-card { margin-top: 20px; }
+// Spaced below as well: things follow the last post too, such as Realtime's
+// typing indicator, and the card shouldn't sit flush against them.
+.LinkRobinsBanners-item--bottom .LinkRobinsBanners-card { margin: 20px 0; }
 .LinkRobinsBanners-item--stream .LinkRobinsBanners-card { margin: 20px 0; }
+.LinkRobinsBanners-item--first .LinkRobinsBanners-card  { margin: 20px 0; }
 
 @media (max-width: 767px) {
     .LinkRobinsBanners-card { padding: 12px 14px; }

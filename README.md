@@ -2,9 +2,10 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) [![Latest Stable Version](https://img.shields.io/packagist/v/linkrobins/discussion-banners.svg)](https://packagist.org/packages/linkrobins/discussion-banners)
 
-A [Flarum](https://flarum.org) extension that shows configurable info banners on discussion pages. Add as many banners as you like, each in one of three placements:
+A [Flarum](https://flarum.org) extension that shows configurable info banners on discussion pages. Add as many banners as you like, each in one of four placements:
 
 - **Above the discussion**, before the first post
+- **After the first post**
 - **Below the discussion**, after the last post
 - **Between posts**, after every Nth post
 
@@ -20,13 +21,17 @@ A banner can run across the whole forum, or only where you want it:
 
 Because each banner carries its own text, different discussions can show completely different notices. Add one banner per notice and point each at its discussions.
 
+By default, every banner that matches a discussion is shown, stacked in the order you listed them. Turn on **Show only the most specific banner** to have the closest match win instead: in each placement, a banner picked for that discussion beats one for its subtag, which beats one for a tag, which beats one shown in every discussion. So a general notice can be replaced in one tag, or in a single discussion, without turning it off elsewhere.
+
 Targeting and visibility are both enforced server side: a banner written for one discussion is never delivered to someone reading another, and content for one audience never reaches a different one. Banners are sent only with the discussion being viewed, so discussion lists carry no banner data at all.
 
 Banners render as a theme-aware card that follows your forum's colors in both light and dark modes. Content HTML is sanitized before display.
 
 ## Compatibility
 
-Works on **Flarum 1.8** and **Flarum 2.x** with the same release. No configuration differences between the two.
+This is the 2.x line, for **Flarum 2.0**. Flarum 1.8 is served by the 1.x line, which no longer gets updates.
+
+Banners also appear on [FoF Blog](https://github.com/FriendsOfFlarum/blog) articles: above the article, right after it, and among its comments.
 
 ## Installation
 

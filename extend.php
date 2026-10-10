@@ -27,6 +27,7 @@ $extenders = [
         // Every banner lives in this one JSON list, so admins can add as many
         // as they like without a settings key per banner.
         ->default(BannerSettings::SETTING, '')
+        ->default(BannerSettings::MOST_SPECIFIC, '0')
 
         // The three single-placement banners of 1.0.x. Still declared so an
         // install that rolls back to 1.0.x keeps its banners: the migration

@@ -39,6 +39,7 @@ final class AddDiscussionBannersV2
                             $context->getActor()->isGuest(),
                             (int) $discussion->id,
                             fn () => $this->tags->idsFor($discussion),
+                            fn () => $this->tags->childIdsFor($discussion),
                         );
                     } catch (\Throwable $e) {
                         return [];

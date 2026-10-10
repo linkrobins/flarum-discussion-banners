@@ -27,7 +27,27 @@ final class BannerSettings
     /** The JSON list of banners. */
     public const SETTING = self::PREFIX.'banners';
 
-    public const PLACEMENTS = ['top', 'bottom', 'stream'];
+    /** first = right after the first post. */
+    public const PLACEMENTS = ['top', 'first', 'bottom', 'stream'];
+
+    /** The placements 1.0.x stored as separate settings. Frozen: never grows. */
+    private const LEGACY_PLACEMENTS = ['top', 'bottom', 'stream'];
+
+    /**
+     * When on, a placement shows only its most specific matching banners: one
+     * picked for this discussion beats one for a subtag, which beats one for a
+     * tag, which beats one shown everywhere.
+     */
+    public const MOST_SPECIFIC = self::PREFIX.'most_specific';
+
+    /** Specificity ranks, see MOST_SPECIFIC. */
+    private const RANK_EVERYWHERE = 0;
+
+    private const RANK_TAG = 1;
+
+    private const RANK_CHILD_TAG = 2;
+
+    private const RANK_DISCUSSION = 3;
 
     public const VISIBILITIES = ['everyone', 'guests', 'members'];
 
@@ -79,12 +99,18 @@ final class BannerSettings
      * @param  \Closure(): list<int>|null  $tagIds  Resolves the discussion's tag ids. Only
      *                                              called if some banner targets tags, so
      *                                              installs without tag targeting pay nothing.
+     * @param  \Closure(): list<int>|null  $childTagIds  Resolves which of those tags have a
+     *                                                   parent tag. Only called when the
+     *                                                   most-specific setting is on.
      * @return list<array<string, mixed>>
      */
-    public function visibleIn(bool $isGuest, ?int $discussionId = null, ?\Closure $tagIds = null): array
+    public function visibleIn(bool $isGuest, ?int $discussionId = null, ?\Closure $tagIds = null, ?\Closure $childTagIds = null): array
     {
         $banners = [];
+        $ranks = [];
         $tags = null;
+        $childTags = null;
+        $mostSpecific = (bool) $this->settings->get(self::MOST_SPECIFIC);
 
         foreach ($this->rules() as $rule) {
             if (! $rule['enabled'] || $rule['content'] === '') {
@@ -110,6 +136,20 @@ final class BannerSettings
                 }
             }
 
+            $rank = self::RANK_EVERYWHERE;
+
+            // "Everywhere except" is a general banner, so only "only these"
+            // ranks above everywhere.
+            if ($mostSpecific && $rule['scope'] === 'only') {
+                if ($discussionId !== null && in_array($discussionId, $rule['discussions'], true)) {
+                    $rank = self::RANK_DISCUSSION;
+                } else {
+                    $childTags ??= $childTagIds ? array_map('intval', $childTagIds()) : [];
+                    $matched = array_intersect($rule['tags'], $tags ?? []);
+                    $rank = array_intersect($matched, $childTags) !== [] ? self::RANK_CHILD_TAG : self::RANK_TAG;
+                }
+            }
+
             $banner = [
                 'id' => $rule['id'],
                 'placement' => $rule['placement'],
@@ -130,9 +170,30 @@ final class BannerSettings
             }
 
             $banners[] = $banner;
+            $ranks[] = $rank;
         }
 
-        return $banners;
+        if (! $mostSpecific) {
+            return $banners;
+        }
+
+        // Per placement, keep the banners at the highest rank present; ties
+        // still stack, in the order they were configured.
+        $best = [];
+
+        foreach ($banners as $i => $banner) {
+            $best[$banner['placement']] = max($best[$banner['placement']] ?? self::RANK_EVERYWHERE, $ranks[$i]);
+        }
+
+        $kept = [];
+
+        foreach ($banners as $i => $banner) {
+            if ($ranks[$i] === $best[$banner['placement']]) {
+                $kept[] = $banner;
+            }
+        }
+
+        return $kept;
     }
 
     /**
@@ -224,7 +285,7 @@ final class BannerSettings
     {
         $rules = [];
 
-        foreach (self::PLACEMENTS as $placement) {
+        foreach (self::LEGACY_PLACEMENTS as $placement) {
             $prefix = self::PREFIX.$placement;
             $get = fn (string $key) => (string) ($values[$prefix.$key] ?? '');
 
@@ -336,7 +397,7 @@ final class BannerSettings
     {
         $values = [self::PREFIX.'stream_every' => $this->settings->get(self::PREFIX.'stream_every')];
 
-        foreach (self::PLACEMENTS as $placement) {
+        foreach (self::LEGACY_PLACEMENTS as $placement) {
             foreach (['_enabled', '_label', '_content', '_visibility', '_color', '_icon_type', '_icon_path', '_icon_url', '_icon_emoji'] as $key) {
                 $values[self::PREFIX.$placement.$key] = $this->settings->get(self::PREFIX.$placement.$key);
             }
