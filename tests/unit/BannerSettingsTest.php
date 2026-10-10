@@ -34,10 +34,24 @@ class BannerSettingsTest extends TestCase
      * @param array<int, array<string, mixed>> $rules
      * @param array<string, string> $extra
      */
-    private function banners(array $rules, bool $isGuest = true, ?int $discussionId = null, ?\Closure $tagIds = null, array $extra = []): array
+    private function banners(array $rules, bool $isGuest = true, ?int $discussionId = null, ?\Closure $tagIds = null, array $extra = [], ?\Closure $childTagIds = null): array
     {
         return $this->settings(['banners' => json_encode($rules)] + $extra)
-            ->visibleIn($isGuest, $discussionId, $tagIds);
+            ->visibleIn($isGuest, $discussionId, $tagIds, $childTagIds);
+    }
+
+    /**
+     * Ids of the banners shown in discussion 5, which is tagged 1 (a parent)
+     * and 2 (its child), with the most-specific setting on or off.
+     *
+     * @param array<int, array<string, mixed>> $rules
+     * @return list<string>
+     */
+    private function shownIn5(array $rules, bool $mostSpecific): array
+    {
+        $banners = $this->banners($rules, true, 5, fn () => [1, 2], ['most_specific' => $mostSpecific ? '1' : '0'], fn () => [2]);
+
+        return array_map(fn ($b) => $b['id'], $banners);
     }
 
     /**
@@ -275,5 +289,99 @@ class BannerSettingsTest extends TestCase
         ])]);
 
         $this->assertSame([BannerSettings::ICON_DIR.'a.png'], $settings->iconPaths());
+    }
+
+    #[Test]
+    public function the_after_first_post_placement_is_kept(): void
+    {
+        $banners = $this->banners([$this->rule(['placement' => 'first'])]);
+
+        $this->assertSame('first', $banners[0]['placement']);
+    }
+
+    #[Test]
+    public function every_matching_banner_shows_when_most_specific_is_off(): void
+    {
+        $rules = [
+            $this->rule(['id' => 'all']),
+            $this->rule(['id' => 'tag', 'scope' => 'only', 'tags' => [1]]),
+            $this->rule(['id' => 'discussion', 'scope' => 'only', 'discussions' => [5]]),
+        ];
+
+        $this->assertSame(['all', 'tag', 'discussion'], $this->shownIn5($rules, false));
+    }
+
+    #[Test]
+    public function a_discussion_banner_beats_tag_and_global_banners(): void
+    {
+        $rules = [
+            $this->rule(['id' => 'all']),
+            $this->rule(['id' => 'subtag', 'scope' => 'only', 'tags' => [2]]),
+            $this->rule(['id' => 'discussion', 'scope' => 'only', 'discussions' => [5]]),
+        ];
+
+        $this->assertSame(['discussion'], $this->shownIn5($rules, true));
+    }
+
+    #[Test]
+    public function a_subtag_banner_beats_its_parent_tag_banner(): void
+    {
+        $rules = [
+            $this->rule(['id' => 'parent', 'scope' => 'only', 'tags' => [1]]),
+            $this->rule(['id' => 'subtag', 'scope' => 'only', 'tags' => [2]]),
+            $this->rule(['id' => 'all']),
+        ];
+
+        $this->assertSame(['subtag'], $this->shownIn5($rules, true));
+    }
+
+    #[Test]
+    public function a_tag_banner_beats_global_and_except_banners(): void
+    {
+        $rules = [
+            $this->rule(['id' => 'all']),
+            $this->rule(['id' => 'except', 'scope' => 'except', 'discussions' => [9]]),
+            $this->rule(['id' => 'parent', 'scope' => 'only', 'tags' => [1]]),
+        ];
+
+        $this->assertSame(['parent'], $this->shownIn5($rules, true));
+    }
+
+    #[Test]
+    public function equally_specific_banners_still_stack(): void
+    {
+        $rules = [
+            $this->rule(['id' => 'one']),
+            $this->rule(['id' => 'two', 'scope' => 'except', 'discussions' => [9]]),
+        ];
+
+        $this->assertSame(['one', 'two'], $this->shownIn5($rules, true));
+    }
+
+    #[Test]
+    public function each_placement_is_ranked_on_its_own(): void
+    {
+        $rules = [
+            $this->rule(['id' => 'top-all']),
+            $this->rule(['id' => 'top-discussion', 'scope' => 'only', 'discussions' => [5]]),
+            $this->rule(['id' => 'bottom-all', 'placement' => 'bottom']),
+        ];
+
+        $this->assertSame(['top-discussion', 'bottom-all'], $this->shownIn5($rules, true));
+    }
+
+    #[Test]
+    public function child_tags_are_only_resolved_when_needed(): void
+    {
+        $called = false;
+        $rules = [$this->rule(['id' => 'parent', 'scope' => 'only', 'tags' => [1]])];
+
+        $this->banners($rules, true, 5, fn () => [1, 2], ['most_specific' => '0'], function () use (&$called) {
+            $called = true;
+
+            return [2];
+        });
+
+        $this->assertFalse($called);
     }
 }

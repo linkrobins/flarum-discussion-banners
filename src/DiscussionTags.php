@@ -22,6 +22,9 @@ final class DiscussionTags
     /** @var array<int, list<int>> */
     private array $cache = [];
 
+    /** @var array<int, list<int>> */
+    private array $childCache = [];
+
     /**
      * @param  mixed  $discussion  \Flarum\Discussion\Discussion
      * @return list<int>
@@ -35,6 +38,45 @@ final class DiscussionTags
         }
 
         return $this->cache[$id] = $this->resolve($discussion, $id);
+    }
+
+    /**
+     * The discussion's tags that sit under a parent tag (subtags), for ranking
+     * a subtag's banner above its parent's.
+     *
+     * @param  mixed  $discussion  \Flarum\Discussion\Discussion
+     * @return list<int>
+     */
+    public function childIdsFor($discussion): array
+    {
+        $id = (int) $discussion->id;
+
+        if (isset($this->childCache[$id])) {
+            return $this->childCache[$id];
+        }
+
+        try {
+            if ($discussion->relationLoaded('tags')) {
+                return $this->childCache[$id] = array_values(array_map(
+                    'intval',
+                    $discussion->getRelation('tags')->whereNotNull('parent_id')->pluck('id')->all()
+                ));
+            }
+
+            $ids = $this->idsFor($discussion);
+
+            if ($ids === []) {
+                return $this->childCache[$id] = [];
+            }
+
+            return $this->childCache[$id] = array_values(array_map('intval', $discussion->getConnection()->table('tags')
+                ->whereIn('id', $ids)
+                ->whereNotNull('parent_id')
+                ->pluck('id')
+                ->all()));
+        } catch (\Throwable $e) {
+            return $this->childCache[$id] = [];
+        }
     }
 
     /**

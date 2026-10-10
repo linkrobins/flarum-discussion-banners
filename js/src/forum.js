@@ -1,8 +1,8 @@
 import DOMPurify from 'dompurify';
 
 // Discussion Banners: admin-configured info banners spliced into the post
-// stream, in up to three placements: above the first post, below the last
-// post, and after every Nth post. Any number of banners can be configured, and
+// stream, in up to four placements: above the first post, right after it,
+// below the last post, and after every Nth post. Any number of banners can be configured, and
 // each one can be targeted at particular discussions or tags.
 //
 // Targeting is resolved server-side: the discussion payload carries only the
@@ -122,10 +122,15 @@ app.initializers.add(EXT_ID, () => {
     const bottoms = all.filter((b) => b.placement === 'bottom');
     const streams = all.filter((b) => b.placement === 'stream');
 
+    const state = this.stream || (this.attrs && this.attrs.stream);
+
+    // A blog article (fof/blog) shows its first post outside this stream, and
+    // its own extender below puts these banners after it instead.
+    const firsts = state && state.lrBannersBlog ? [] : all.filter((b) => b.placement === 'first');
+
     // Total number of stream entries, for anchoring bottom banners to the
     // discussion's ABSOLUTE last post (the stream only renders a window of a
     // long discussion at a time).
-    const state = this.stream || (this.attrs && this.attrs.stream);
     const total = state && typeof state.count === 'function' ? state.count() : null;
 
     const children = vnode.children;
@@ -146,6 +151,8 @@ app.initializers.add(EXT_ID, () => {
       const index = Number(child.attrs['data-index']);
 
       out.push(child);
+
+      if (index === 0) firsts.forEach((b) => out.push(bannerItem(b.id + '-first', b, 'first')));
 
       streams.forEach((b) => {
         // Suppressed on the last post so it never stacks with a bottom banner.
@@ -189,5 +196,34 @@ app.initializers.add(EXT_ID, () => {
         )
       )
     );
+  });
+
+  // fof/blog shows an article on its own page: the first post on its own, then
+  // the comments in a regular post stream. Top banners go above the article
+  // and "after the first post" banners right below it. Extended by string path,
+  // so this does nothing unless fof/blog is installed.
+  extend('ext:fof/blog/forum/pages/BlogItem', 'postItems', function (items) {
+    const discussion = this.article;
+    if (!discussion || this.loading) return;
+
+    // Tells the PostStream extender above that this stream's first post is the
+    // article, which is handled here.
+    if (this.stream) this.stream.lrBannersBlog = true;
+
+    const all = bannersFor(discussion);
+    const add = (placement, priority) =>
+      all
+        .filter((b) => b.placement === placement)
+        .forEach((b, i) =>
+          items.add(
+            'lrBanners-' + b.id,
+            m('div', { className: 'LinkRobinsBanners-item LinkRobinsBanners-item--' + placement }, bannerCard(b, placement)),
+            priority - i / 100
+          )
+        );
+
+    // The article post is at priority 40.
+    add('top', 50);
+    add('first', 30);
   });
 });
