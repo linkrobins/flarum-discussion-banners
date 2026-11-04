@@ -7,9 +7,11 @@ A [Flarum](https://flarum.org) extension that shows configurable info banners on
 - **Above the discussion**, before the first post
 - **After the first post**
 - **Below the discussion**, after the last post
-- **Between posts**, after every Nth post
+- **Between posts**, after every Nth post (every 8th by default, 2 at minimum)
 
-Every banner has its own on/off switch, an optional small uppercase heading (for example "Info" or "From our sponsor"), HTML content, an optional icon beside the text (an uploaded image or an emoji), an accent color, and a visibility setting: everyone, guests only, or logged-in users only.
+Every banner has its own on/off switch, an optional small uppercase heading (for example "Info" or "From our sponsor"), HTML content, an optional icon beside the text (an uploaded PNG, JPEG, GIF or WebP image up to 2 MB, or an emoji), an accent color, and a visibility setting: everyone, guests only, or logged-in users only. You can keep up to 50 banners.
+
+The accent color tints the banner's border, background and small heading. Leave it blank to use your theme color. Body text always follows the theme, so banners stay readable in light and dark modes.
 
 ## Where each banner appears
 
@@ -25,6 +27,8 @@ By default, every banner that matches a discussion is shown, stacked in the orde
 
 Targeting and visibility are both enforced server side: a banner written for one discussion is never delivered to someone reading another, and content for one audience never reaches a different one. Banners are sent only with the discussion being viewed, so discussion lists carry no banner data at all.
 
+Targeting by tag needs [Flarum Tags](https://github.com/flarum/framework/tree/2.x/extensions/tags) enabled; without it, banners still work and can be aimed at individual discussions. A banner left on "Only the discussions I choose" with nothing selected appears nowhere, and "All discussions except" with nothing selected appears everywhere. Icons you upload but never save, or that you replace or remove, are cleaned up automatically.
+
 Banners render as a theme-aware card that follows your forum's colors in both light and dark modes. Content HTML is sanitized before display.
 
 ## Compatibility
@@ -39,7 +43,7 @@ Banners also appear on [FoF Blog](https://github.com/FriendsOfFlarum/blog) artic
 composer require linkrobins/discussion-banners
 ```
 
-Then enable the extension in the admin panel and configure the banners on its settings page.
+Then switch it on in the admin panel's Extensions page and add your banners on its settings page. No permissions are involved: who sees each banner is set per banner.
 
 ## Updating
 
