@@ -9,9 +9,19 @@ A [Flarum](https://flarum.org) extension that shows configurable info banners on
 - **Below the discussion**, after the last post
 - **Between posts**, after every Nth post (every 8th by default, 2 at minimum)
 
-Every banner has its own on/off switch, an optional small uppercase heading (for example "Info" or "From our sponsor"), HTML content, an optional icon beside the text (an uploaded PNG, JPEG, GIF or WebP image up to 2 MB, or an emoji), an accent color, and a visibility setting: everyone, guests only, or logged-in users only. You can keep up to 50 banners.
+Every banner has its own on/off switch, an optional small uppercase heading (for example "Info" or "From our sponsor"), HTML content, an optional icon beside the text (an uploaded PNG, JPEG, GIF or WebP image up to 2 MB, or an emoji), an accent color, a visibility setting (everyone, guests only, or logged-in users only), and an optional list of user groups. You can keep up to 50 banners.
 
 The accent color tints the banner's border, background and small heading. Leave it blank to use your theme color. Body text always follows the theme, so banners stay readable in light and dark modes.
+
+## Who sees each banner
+
+Each banner has a **Visible to groups** picker listing every group on your forum, including Admins, Moderators, your own groups, **Guests** (visitors who are not logged in) and **Members** (everyone logged in). A banner shows to a viewer who is in at least one of the groups you pick. Pick none and it shows to everyone, so banners you already have are unchanged.
+
+- The picker narrows the **Who sees it** setting: when both are set, the viewer has to pass both.
+- Admins are matched like anyone else. To see a banner meant for moderators, an admin needs to be in a group it lists. In the admin panel you always see and edit every banner.
+- If you delete a group, a banner that listed only that group has nobody left to show to. Pick new groups or clear the list.
+
+When **Show only the most specific banner** is on, the most specific one is chosen among the banners the viewer can see, so a banner hidden from a viewer never replaces a general one they should get.
 
 ## Where each banner appears
 
@@ -25,7 +35,7 @@ Because each banner carries its own text, different discussions can show complet
 
 By default, every banner that matches a discussion is shown, stacked in the order you listed them. Turn on **Show only the most specific banner** to have the closest match win instead: in each placement, a banner picked for that discussion beats one for its subtag, which beats one for a tag, which beats one shown in every discussion. So a general notice can be replaced in one tag, or in a single discussion, without turning it off elsewhere.
 
-Targeting and visibility are both enforced server side: a banner written for one discussion is never delivered to someone reading another, and content for one audience never reaches a different one. Banners are sent only with the discussion being viewed, so discussion lists carry no banner data at all.
+Targeting, audience and groups are all enforced server side: a banner written for one discussion is never delivered to someone reading another, and content for one audience or group never reaches a different one. Banners are sent only with the discussion being viewed, so discussion lists carry no banner data at all.
 
 Targeting by tag needs [Flarum Tags](https://github.com/flarum/framework/tree/2.x/extensions/tags) enabled; without it, banners still work and can be aimed at individual discussions. A banner left on "Only the discussions I choose" with nothing selected appears nowhere, and "All discussions except" with nothing selected appears everywhere. Icons you upload but never save, or that you replace or remove, are cleaned up automatically.
 
@@ -53,7 +63,7 @@ php flarum migrate
 php flarum cache:clear
 ```
 
-Updating from 1.0.x keeps your existing banners: the three per-placement banners are converted into the new list on `php flarum migrate`, each set to appear in all discussions.
+The group list is stored with each banner, so this update needs no migration. Updating from 1.0.x keeps your existing banners: the three per-placement banners are converted into the new list on `php flarum migrate`, each set to appear in all discussions.
 
 ## Links
 

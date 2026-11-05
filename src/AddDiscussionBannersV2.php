@@ -35,11 +35,14 @@ final class AddDiscussionBannersV2
                     // Fail closed: a throw here must degrade to "no banners",
                     // not break the discussion every reader loads.
                     try {
+                        $actor = $context->getActor();
+
                         return $this->banners->visibleIn(
-                            $context->getActor()->isGuest(),
+                            $actor->isGuest(),
                             (int) $discussion->id,
                             fn () => $this->tags->idsFor($discussion),
                             fn () => $this->tags->childIdsFor($discussion),
+                            BannerSettings::viewerGroupIds($actor->isGuest(), $actor->isGuest() ? [] : $actor->groups->pluck('id')->all()),
                         );
                     } catch (\Throwable $e) {
                         return [];
