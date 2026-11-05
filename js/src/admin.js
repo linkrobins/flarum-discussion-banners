@@ -41,6 +41,10 @@ const searches = {};
 // A forum without flarum/tags simply has no tag section.
 const tags = { status: 'idle', list: [] };
 
+// Groups are fetched once too. The API lists Admins, Guests and Members
+// along with the custom groups, which is exactly the set a banner can target.
+const groups = { status: 'idle', list: [] };
+
 const trans = (key, params) => app.translator.trans(EXT_ID + '.admin.settings.' + key, params);
 
 // Resolve a core component from the module registry.
@@ -70,6 +74,7 @@ function blankRule() {
     scope: 'all',
     discussions: [],
     tags: [],
+    groups: [],
   };
 }
 
@@ -86,6 +91,7 @@ function complete(rule, index) {
     scope: SCOPES.indexOf(rule.scope) >= 0 ? rule.scope : 'all',
     discussions: Array.isArray(rule.discussions) ? rule.discussions : [],
     tags: Array.isArray(rule.tags) ? rule.tags : [],
+    groups: Array.isArray(rule.groups) ? rule.groups : [],
     icon: { type: icon.type || '', path: icon.path || '', url: icon.url || '', emoji: icon.emoji || '' },
   });
 }
@@ -166,6 +172,26 @@ function loadTags() {
       // No tags extension (or no permission to list them): the tag section
       // simply doesn't appear.
       tags.status = 'unavailable';
+      m.redraw();
+    });
+}
+
+function loadGroups() {
+  if (groups.status !== 'idle') return;
+  groups.status = 'loading';
+
+  app
+    .request({ method: 'GET', url: apiUrl('/groups') })
+    .then((doc) => {
+      groups.list = ((doc && doc.data) || []).map((group) => ({
+        id: Number(group.id),
+        name: (group.attributes && (group.attributes.namePlural || group.attributes.nameSingular)) || '#' + group.id,
+      }));
+      groups.status = 'ready';
+      m.redraw();
+    })
+    .catch(() => {
+      groups.status = 'unavailable';
       m.redraw();
     });
 }
@@ -343,6 +369,54 @@ function targeting(page, rule) {
   ]);
 }
 
+// "Visible to": toggle buttons for every group. Empty = everyone. The ids are
+// what the server matches on (the name is only a label), and the list is
+// enforced server side, so a hidden banner is never sent to the browser.
+function groupsField(page, rule) {
+  loadGroups();
+
+  const selected = (rule.groups || []).map((group) => Number(group && typeof group === 'object' ? group.id : group));
+
+  const toggle = (group) =>
+    update(page, rule.id, {
+      groups: selected.indexOf(group.id) >= 0 ? selected.filter((id) => id !== group.id) : selected.concat([group.id]),
+    });
+
+  let control;
+
+  if (groups.status === 'ready' && groups.list.length) {
+    control = m(
+      'div',
+      { className: 'LinkRobinsBanners-tagGrid LinkRobinsBanners-groupGrid' },
+      groups.list.map((group) =>
+        m(
+          'button',
+          {
+            type: 'button',
+            'aria-pressed': selected.indexOf(group.id) >= 0 ? 'true' : 'false',
+            className: 'LinkRobinsBanners-tagChoice' + (selected.indexOf(group.id) >= 0 ? ' is-selected' : ''),
+            onclick: () => toggle(group),
+          },
+          group.name
+        )
+      )
+    );
+  } else {
+    control = m(
+      'div',
+      { className: 'LinkRobinsBanners-pickerHint' },
+      trans(groups.status === 'unavailable' ? 'groups_unavailable' : 'groups_loading')
+    );
+  }
+
+  return m('div', { className: 'Form-group' }, [
+    m('label', trans('groups_label')),
+    m('div', { className: 'helpText' }, trans('groups_help')),
+    control,
+    selected.length ? null : m('div', { className: 'LinkRobinsBanners-pickerHint' }, trans('groups_everyone')),
+  ]);
+}
+
 // ------------------------------------------------------------------ fields
 
 // Core's styled select markup (wrapper + caret icon), so the control looks
@@ -492,6 +566,15 @@ function iconField(page, rule) {
 // Built as a list of children rather than a joined string: translations can
 // come back as arrays, and concatenating those gives "[object Object]".
 function summary(rule) {
+  const base = scopeSummary(rule);
+  const count = (rule.groups || []).length;
+
+  if (!count) return base;
+
+  return [base, ' · ', trans(count === 1 ? 'summary_group_one' : 'summary_group_many', { count })];
+}
+
+function scopeSummary(rule) {
   if (rule.scope === 'all') return trans('summary_all');
 
   const discussions = (rule.discussions || []).length;
@@ -599,6 +682,7 @@ function bannerCard(page, rule) {
             (value) => update(page, rule.id, { visibility: value })
           )
         ),
+        groupsField(page, rule),
         colorField(page, rule),
         iconField(page, rule),
       ]);

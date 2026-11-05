@@ -34,10 +34,10 @@ class BannerSettingsTest extends TestCase
      * @param array<int, array<string, mixed>> $rules
      * @param array<string, string> $extra
      */
-    private function banners(array $rules, bool $isGuest = true, ?int $discussionId = null, ?\Closure $tagIds = null, array $extra = [], ?\Closure $childTagIds = null): array
+    private function banners(array $rules, bool $isGuest = true, ?int $discussionId = null, ?\Closure $tagIds = null, array $extra = [], ?\Closure $childTagIds = null, ?array $groupIds = null): array
     {
         return $this->settings(['banners' => json_encode($rules)] + $extra)
-            ->visibleIn($isGuest, $discussionId, $tagIds, $childTagIds);
+            ->visibleIn($isGuest, $discussionId, $tagIds, $childTagIds, $groupIds ?? BannerSettings::viewerGroupIds($isGuest));
     }
 
     /**
@@ -383,5 +383,81 @@ class BannerSettingsTest extends TestCase
         });
 
         $this->assertFalse($called);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rules
+     * @param list<int> $own The viewer's own group ids (null = guest).
+     * @return list<string>
+     */
+    private function shownTo(array $rules, ?array $own, array $extra = []): array
+    {
+        $groups = BannerSettings::viewerGroupIds($own === null, $own ?? []);
+
+        return array_column($this->banners($rules, $own === null, 5, fn () => [1, 2], $extra, fn () => [2], $groups), 'id');
+    }
+
+    #[Test]
+    public function a_banner_with_no_groups_is_shown_to_everyone(): void
+    {
+        $rules = [$this->rule(['id' => 'a']), $this->rule(['id' => 'b', 'groups' => []])];
+
+        $this->assertSame(['a', 'b'], $this->shownTo($rules, null));
+        $this->assertSame(['a', 'b'], $this->shownTo($rules, []));
+        $this->assertSame(['a', 'b'], $this->shownTo($rules, [1]));
+    }
+
+    #[Test]
+    public function a_banner_limited_to_groups_shows_only_to_those_groups(): void
+    {
+        $rules = [
+            $this->rule(['id' => 'guests', 'groups' => [2]]),
+            $this->rule(['id' => 'members', 'groups' => [3]]),
+            $this->rule(['id' => 'mods', 'groups' => [4]]),
+            $this->rule(['id' => 'modsOrAdmins', 'groups' => [['id' => 4], 1]]),
+        ];
+
+        $this->assertSame(['guests'], $this->shownTo($rules, null));
+        $this->assertSame(['members'], $this->shownTo($rules, []));
+        $this->assertSame(['members', 'mods', 'modsOrAdmins'], $this->shownTo($rules, [4]));
+        $this->assertSame(['members', 'modsOrAdmins'], $this->shownTo($rules, [1]));
+    }
+
+    #[Test]
+    public function logged_in_users_are_not_counted_as_guests(): void
+    {
+        $this->assertSame([3], BannerSettings::viewerGroupIds(false));
+        $this->assertSame([3, 4], BannerSettings::viewerGroupIds(false, ['4', 4]));
+        $this->assertSame([2], BannerSettings::viewerGroupIds(true, [4]));
+    }
+
+    #[Test]
+    public function a_limited_banner_fails_closed_when_no_groups_are_passed(): void
+    {
+        $rules = [$this->rule(['groups' => [3]])];
+
+        $this->assertSame([], $this->settings(['banners' => json_encode($rules)])->visibleIn(false, 1));
+    }
+
+    #[Test]
+    public function the_most_specific_banner_is_chosen_among_those_the_viewer_can_see(): void
+    {
+        $rules = [
+            $this->rule(['id' => 'general']),
+            $this->rule(['id' => 'tagMods', 'scope' => 'only', 'tags' => [1], 'groups' => [4]]),
+        ];
+        $on = ['most_specific' => '1'];
+
+        // A hidden specific banner must not suppress the general one.
+        $this->assertSame(['general'], $this->shownTo($rules, [], $on));
+        $this->assertSame(['tagMods'], $this->shownTo($rules, [4], $on));
+    }
+
+    #[Test]
+    public function malformed_group_lists_are_ignored(): void
+    {
+        $rules = [$this->rule(['id' => 'a', 'groups' => 'nope']), $this->rule(['id' => 'b', 'groups' => [0, -1, 'x']])];
+
+        $this->assertSame(['a', 'b'], $this->shownTo($rules, null));
     }
 }

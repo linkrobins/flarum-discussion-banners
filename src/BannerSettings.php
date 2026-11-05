@@ -49,6 +49,11 @@ final class BannerSettings
 
     private const RANK_DISCUSSION = 3;
 
+    /** Flarum's built-in Guests and Members group ids. */
+    public const GUEST_GROUP = 2;
+
+    public const MEMBER_GROUP = 3;
+
     public const VISIBILITIES = ['everyone', 'guests', 'members'];
 
     /** all = every discussion, only = the targeted ones, except = all but those. */
@@ -102,9 +107,12 @@ final class BannerSettings
      * @param  \Closure(): list<int>|null  $childTagIds  Resolves which of those tags have a
      *                                                   parent tag. Only called when the
      *                                                   most-specific setting is on.
+     * @param  list<int>  $groupIds  The viewer's group ids as seen by banners: see
+     *                               viewerGroupIds(). A banner limited to groups shows only
+     *                               when one of them is in this list. Omitted = no groups.
      * @return list<array<string, mixed>>
      */
-    public function visibleIn(bool $isGuest, ?int $discussionId = null, ?\Closure $tagIds = null, ?\Closure $childTagIds = null): array
+    public function visibleIn(bool $isGuest, ?int $discussionId = null, ?\Closure $tagIds = null, ?\Closure $childTagIds = null, array $groupIds = []): array
     {
         $banners = [];
         $ranks = [];
@@ -118,6 +126,13 @@ final class BannerSettings
             }
 
             if (($rule['visibility'] === 'guests' && ! $isGuest) || ($rule['visibility'] === 'members' && $isGuest)) {
+                continue;
+            }
+
+            // Limited to groups: the viewer must be in at least one. Checked
+            // before ranking, so with "most specific" on a banner the viewer
+            // can't see never suppresses a general one they can.
+            if ($rule['groups'] !== [] && array_intersect($rule['groups'], $groupIds) === []) {
                 continue;
             }
 
@@ -197,6 +212,31 @@ final class BannerSettings
     }
 
     /**
+     * The group ids a banner's "visible to" list is matched against. Guests
+     * are only the Guests group. Everyone logged in is in Members plus their
+     * own groups. Deliberately not User::permissionGroupIds(), which counts
+     * the Guests group for everybody because permissions are cumulative:
+     * "Guests" on a banner means logged-out visitors.
+     *
+     * @param  iterable<int|string>  $memberGroupIds  The user's own group ids.
+     * @return list<int>
+     */
+    public static function viewerGroupIds(bool $isGuest, iterable $memberGroupIds = []): array
+    {
+        if ($isGuest) {
+            return [self::GUEST_GROUP];
+        }
+
+        $ids = [self::MEMBER_GROUP];
+
+        foreach ($memberGroupIds as $id) {
+            $ids[] = (int) $id;
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
      * Every icon file the given banners refer to, for pruning uploads that no
      * banner uses any more.
      *
@@ -268,6 +308,8 @@ final class BannerSettings
                 'scope' => in_array($scope, self::SCOPES, true) ? $scope : 'all',
                 'discussions' => self::ids($raw['discussions'] ?? []),
                 'tags' => self::ids($raw['tags'] ?? []),
+                // Empty = every group (the behavior before this existed).
+                'groups' => self::ids($raw['groups'] ?? []),
             ];
         }
 
@@ -311,6 +353,7 @@ final class BannerSettings
                 'scope' => 'all',
                 'discussions' => [],
                 'tags' => [],
+                'groups' => [],
             ];
         }
 
